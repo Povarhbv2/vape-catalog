@@ -1,7 +1,7 @@
 const tg = window.Telegram?.WebApp;
 if (tg) tg.expand();
 
-fetch("/data.json?v=3")
+fetch("https://vape-catalog-n5ed.vercel.app/data.json")
   .then(res => res.json())
   .then(data => {
     const catalog = document.getElementById("catalog");
@@ -20,4 +20,5 @@ fetch("/data.json?v=3")
     });
   })
   .catch(err => console.log("Ошибка:", err));
+
 
