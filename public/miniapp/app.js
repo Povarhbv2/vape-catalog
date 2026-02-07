@@ -1,26 +1,56 @@
 const tg = window.Telegram?.WebApp;
 if(tg) tg.expand();
 
-fetch("https://vape-catalog-n5ed.vercel.app/data.json")
+let DATA;
+
+fetch("/data.json")
 .then(r=>r.json())
 .then(data=>{
-  const catalog=document.getElementById("catalog");
-  catalog.innerHTML="";
+  DATA=data;
+  showCategories();
+});
 
-  data.products.forEach(p=>{
+function showCategories(){
+  const c=document.getElementById("catalog");
+  c.className="grid";
+  c.innerHTML="";
+
+  DATA.categories.forEach(cat=>{
     const div=document.createElement("div");
     div.className="card";
 
     div.innerHTML=`
+      <img src="${cat.image}">
+      <h3>${cat.name}</h3>
+    `;
+
+    div.onclick=()=>showProducts(cat.id);
+    c.appendChild(div);
+  });
+}
+
+function showProducts(catId){
+  const c=document.getElementById("catalog");
+  c.className="grid";
+  c.innerHTML=`<button class="back" onclick="showCategories()">⬅ Назад</button>`;
+
+  DATA.products
+  .filter(p=>p.category===catId)
+  .forEach(p=>{
+    const div=document.createElement("div");
+    div.className="card product";
+
+    div.innerHTML=`
+      <img src="${p.image}">
       <h3>${p.name}</h3>
-      <div class="price">${p.price}</div>
-      <div class="stock">В наличии: ${p.stock}</div>
+      <div>${p.price}</div>
+      <div>В наличии: ${p.stock}</div>
       <button onclick='order(${JSON.stringify(p)})'>Заказать</button>
     `;
 
-    catalog.appendChild(div);
+    c.appendChild(div);
   });
-});
+}
 
 function order(p){
   if(tg){
@@ -29,6 +59,3 @@ function order(p){
     alert("Заказ отправлен");
   }
 }
-
-
-
