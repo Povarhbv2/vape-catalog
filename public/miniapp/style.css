@@ -1,17 +1,17 @@
 body{
   margin:0;
-  background:#0b0b12;
-  color:white;
+  background:#0a0a12;
   font-family:Arial;
+  color:white;
 }
 
 .title{
   text-align:center;
-  color:#d46bff;
+  color:#c86bff;
   text-shadow:0 0 15px #a100ff;
 }
 
-#catalog{
+.grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:15px;
@@ -21,30 +21,23 @@ body{
 .card{
   background:#141420;
   border-radius:18px;
-  padding:20px;
+  padding:15px;
   text-align:center;
   border:1px solid #6a00ff;
   box-shadow:0 0 20px #6a00ff55;
-  transition:.2s;
 }
 
-.card:hover{
-  transform:scale(1.05);
-  box-shadow:0 0 30px #a100ff;
+.card img{
+  width:80px;
+  height:80px;
+  object-fit:contain;
 }
 
-.card h3{
-  color:#e08fff;
-  margin:10px 0;
-}
-
-.price{
-  color:#a1ffb2;
-  font-weight:bold;
-}
-
-.stock{
-  opacity:.7;
+.product img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:12px;
 }
 
 button{
@@ -55,5 +48,10 @@ button{
   padding:10px;
   border-radius:10px;
   width:100%;
-  box-shadow:0 0 15px #a100ff;
+  box-shadow:0 0 10px #a100ff;
+}
+
+.back{
+  margin:10px;
+  background:#333;
 }
