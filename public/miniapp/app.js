@@ -14,6 +14,7 @@ fetch("/data.json")
 
       catalog.appendChild(div);
     });
-  });
+  })
+  .catch(err => console.log(err));
 
 
