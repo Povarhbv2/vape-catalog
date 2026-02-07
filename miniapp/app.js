@@ -17,4 +17,3 @@ fetch("/data.json")
   });
 
 
-
