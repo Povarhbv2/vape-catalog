@@ -1,6 +1,4 @@
-const tg = window.Telegram?.WebApp;
-
-fetch("/data")
+fetch("/data.json")
   .then(res => res.json())
   .then(data => {
     const catalog = document.getElementById("catalog");
@@ -12,20 +10,11 @@ fetch("/data")
         <h3>${p.name}</h3>
         <p>${p.price}</p>
         <p>В наличии: ${p.stock}</p>
-        <button onclick='order(${JSON.stringify(p)})'>
-          Заказать
-        </button>
       `;
 
       catalog.appendChild(div);
     });
   });
 
-function order(p) {
-  if (tg) {
-    tg.sendData(JSON.stringify(p));
-  } else {
-    alert("Заказ отправлен (тест)");
-  }
-}
+
 
