@@ -1,47 +1,28 @@
-// Telegram WebApp (если открыт в Telegram)
-const tg = window.Telegram?.WebApp;
-if (tg) tg.expand();
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Vape Shop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-// Загружаем товары
-fetch("./data.json?v=1")
-  .then(res => res.json())
-  .then(data => {
-    const catalog = document.getElementById("catalog");
+  <!-- Telegram Mini App -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    // Очистить на всякий случай
-    catalog.innerHTML = "";
+  <!-- Стили -->
+  <link rel="stylesheet" href="./style.css?v=1">
+</head>
 
-    data.products.forEach(p => {
-      const div = document.createElement("div");
+<body>
 
-      div.style.marginBottom = "20px";
-      div.style.padding = "10px";
-      div.style.border = "1px solid #ccc";
-      div.style.borderRadius = "10px";
+  <h2>💨 Vape Shop</h2>
 
-      div.innerHTML = `
-        <h3>${p.name}</h3>
-        <p>${p.price}</p>
-        <p>В наличии: ${p.stock}</p>
-        <button onclick='order(${JSON.stringify(p)})'>
-          Заказать
-        </button>
-      `;
+  <div id="catalog"></div>
 
-      catalog.appendChild(div);
-    });
-  })
-  .catch(err => console.log("Ошибка загрузки:", err));
+  <!-- JS -->
+  <script src="./app.js?v=1"></script>
+
+</body>
+</html>
 
 
-// Заказ
-function order(product) {
-  if (tg) {
-    // В Telegram
-    tg.sendData(JSON.stringify(product));
-  } else {
-    // В браузере
-    alert("Заказ отправлен (тест)");
-  }
-}
 
