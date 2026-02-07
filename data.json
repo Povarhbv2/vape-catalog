@@ -1,0 +1,13 @@
+{
+  "categories": [],
+  "products": [
+    {
+      "id": 1,
+      "name": "Тестовый вейп",
+      "price": "2000 ₽",
+      "stock": 5,
+      "image": ""
+    }
+  ]
+}
+
