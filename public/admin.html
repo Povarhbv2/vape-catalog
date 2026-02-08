@@ -2,45 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Admin MEGA FIX</title>
+<title>ADMIN FIX</title>
 
 <style>
-body{
-  background:#0a0014;
-  color:white;
-  font-family:sans-serif;
-  padding:20px;
-}
-
-input,select,button{
-  width:100%;
-  padding:12px;
-  margin:6px 0;
-  border-radius:10px;
-  border:none;
-  font-size:16px;
-}
-
-button{
-  background:linear-gradient(45deg,#8f00ff,#d000ff);
-  color:white;
-}
-
-button:disabled{
-  opacity:0.5;
-}
-
-.card{
-  background:#140028;
-  padding:10px;
-  border-radius:12px;
-  margin-top:10px;
-}
-
-img{
-  max-width:100%;
-  border-radius:12px;
-}
+body{background:#0a0014;color:white;font-family:sans-serif;padding:20px}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:none}
+button{background:linear-gradient(45deg,#8f00ff,#d000ff);color:white}
+.card{background:#140028;padding:10px;border-radius:12px;margin-top:10px}
+img{max-width:100%;border-radius:12px}
 </style>
 </head>
 
@@ -52,7 +21,7 @@ img{
 
 <div id="panel" style="display:none">
 
-<h2>Товар</h2>
+<h2>Добавить товар</h2>
 
 <input id="name" placeholder="Название">
 <input id="price" placeholder="Цена">
@@ -68,20 +37,17 @@ img{
 
 <img id="preview">
 
-<button id="saveBtn" onclick="saveProduct()" disabled>
-Сохранить
-</button>
+<button onclick="saveProduct()">Сохранить</button>
 
-<h2>Список</h2>
+<h2>Товары</h2>
 <div id="list"></div>
 
 </div>
 
 <script type="module">
 
-/* FIREBASE */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc,updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
@@ -92,12 +58,10 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-/* CLOUDINARY */
 const CLOUD="dhmrlczr8";
-const PRESET="vapestock"; // unsigned preset
+const PRESET="vapestock";
 
 let imageURL="";
-let editId=null;
 
 /* LOGIN */
 window.login=()=>{
@@ -130,10 +94,6 @@ window.uploadPhoto=async()=>{
 
  imageURL=String(d.secure_url);
  preview.src=imageURL;
-
- saveBtn.disabled=false;
-
- console.log("Фото OK:",imageURL);
 };
 
 /* SAVE */
@@ -141,11 +101,12 @@ window.saveProduct=async()=>{
 
  const nameVal=name.value.trim();
  const priceVal=price.value.trim();
- const catVal=cat.value||"Pod";
+ const catVal=cat.value;
 
- if(!nameVal)return alert("Название пустое");
- if(!priceVal)return alert("Цена пустая");
- if(!imageURL)return alert("Фото не загружено");
+ if(!nameVal || !priceVal || !imageURL){
+  alert("Заполни всё!");
+  return;
+ }
 
  const data={
   name:String(nameVal),
@@ -155,14 +116,9 @@ window.saveProduct=async()=>{
   views:0
  };
 
- console.log("Отправляем:",data);
+ console.log("SEND:",data);
 
- if(editId){
-  await updateDoc(doc(db,"products",editId),data);
-  editId=null;
- }else{
-  await addDoc(collection(db,"products"),data);
- }
+ await addDoc(collection(db,"products"),data);
 
  alert("Сохранено!");
 
@@ -170,7 +126,6 @@ window.saveProduct=async()=>{
  price.value="";
  preview.src="";
  imageURL="";
- saveBtn.disabled=true;
 
  load();
 };
@@ -182,29 +137,16 @@ async function load(){
 
  snap.forEach(d=>{
   const p=d.data();
-
   list.innerHTML+=`
   <div class="card">
    <img src="${p.image}">
    <b>${p.name}</b><br>
    ${p.price}₽<br>
    ${p.category}<br>
-   <button onclick="edit('${d.id}','${p.name}','${p.price}','${p.category}','${p.image}')">Редактировать</button>
    <button onclick="del('${d.id}')">Удалить</button>
   </div>`;
  });
 }
-
-/* EDIT */
-window.edit=(id,n,p,c,i)=>{
- editId=id;
- name.value=n;
- price.value=p;
- cat.value=c;
- preview.src=i;
- imageURL=i;
- saveBtn.disabled=false;
-};
 
 /* DELETE */
 window.del=async(id)=>{
