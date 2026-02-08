@@ -16,9 +16,14 @@ body{
     color:#d8b3ff;
 }
 
-/* SIMPLE TOP BAR */
-.top{
-    height:40px;
+/* ⚙️ СКРЫТАЯ КНОПКА АДМИНКИ */
+.adminBtn{
+    position:fixed;
+    top:10px;
+    right:10px;
+    opacity:0.15;
+    font-size:22px;
+    z-index:99;
 }
 
 /* SEARCH */
@@ -47,15 +52,11 @@ body{
     padding:8px 14px;
     border-radius:18px;
     cursor:pointer;
-    white-space:nowrap;
-}
-
-/* CATALOG */
-.catalog{
-    padding:15px;
 }
 
 /* CARD */
+.catalog{ padding:15px; }
+
 .card{
     background:#111122;
     padding:12px;
@@ -63,12 +64,13 @@ body{
     margin-bottom:18px;
     box-shadow:0 0 20px #6a00ff55;
 }
+
 .card img{
     width:100%;
     border-radius:14px;
 }
 
-/* PRODUCT */
+/* PRODUCT VIEW */
 .productView{
     display:none;
     padding:15px;
@@ -76,22 +78,10 @@ body{
 .bigImg{
     width:100%;
     border-radius:16px;
-    box-shadow:0 0 25px #a000ff;
 }
 .price{
     font-size:24px;
     color:#c77dff;
-}
-
-/* BUTTON */
-button{
-    background:linear-gradient(45deg,#a000ff,#d000ff);
-    border:none;
-    padding:12px;
-    color:white;
-    border-radius:10px;
-    cursor:pointer;
-    margin-top:8px;
 }
 
 /* ADMIN */
@@ -109,6 +99,14 @@ input,select{
     border:none;
 }
 
+button{
+    background:#a000ff;
+    border:none;
+    padding:12px;
+    color:white;
+    border-radius:10px;
+}
+
 .fav{
     font-size:22px;
     cursor:pointer;
@@ -118,8 +116,8 @@ input,select{
 
 <body>
 
-<!-- скрытая зона для входа в админку -->
-<div class="top" id="secret"></div>
+<!-- ⚙️ КНОПКА -->
+<div class="adminBtn" onclick="openAdmin()">⚙️</div>
 
 <div class="search">
 <input id="search" placeholder="Поиск..." oninput="load()">
@@ -161,6 +159,7 @@ const app=initializeApp({
  authDomain:"vapestock-3dc76.firebaseapp.com",
  projectId:"vapestock-3dc76"
 });
+
 const db=getFirestore(app);
 
 let favs=JSON.parse(localStorage.getItem("favs")||"[]");
@@ -178,7 +177,6 @@ const categories={
  coil:"Испарители"
 };
 
-/* CATEGORY BAR */
 for(const key in categories){
  const b=document.createElement("div");
  b.className="cat";
@@ -187,12 +185,11 @@ for(const key in categories){
  catbar.appendChild(b);
 }
 
-/* LOAD PRODUCTS */
 async function load(){
  catalog.innerHTML="";
  productView.style.display="none";
 
- const search=searchInput.value.toLowerCase();
+ const search=document.getElementById("search").value.toLowerCase();
 
  const snap=await getDocs(collection(db,"products"));
 
@@ -224,7 +221,6 @@ async function load(){
  });
 }
 
-/* FAVORITES */
 function toggleFav(id){
  if(favs.includes(id)) favs=favs.filter(x=>x!=id);
  else favs.push(id);
@@ -232,7 +228,6 @@ function toggleFav(id){
  load();
 }
 
-/* PRODUCT PAGE */
 async function showProduct(p,id){
  await updateDoc(doc(db,"products",id),{views:increment(1)});
 
@@ -253,35 +248,44 @@ window.back=()=>{
  catalog.style.display="block";
 }
 
-/* 🔐 ADMIN — 5 ТАПОВ */
-let taps=0;
-secret.onclick=()=>{
- taps++;
- if(taps>=5){
-   const pass=prompt("Пароль:");
-   if(pass==="lock123612"){
-      admin.style.display="block";
-   }
-   taps=0;
+/* 🔐 АДМИНКА */
+window.openAdmin=()=>{
+ const pass=prompt("Пароль:");
+ if(pass==="lock123612"){
+   admin.style.display="block";
  }
- setTimeout(()=>taps=0,1500);
 }
 
-/* ADD PRODUCT */
+/* ➕ ДОБАВЛЕНИЕ ТОВАРА */
 window.addProduct=async()=>{
+ const n=name.value.trim();
+ const p=price.value.trim();
+ const i=image.value.trim();
+ const c=category.value;
+
+ if(!n||!p||!i){
+   alert("Заполни всё");
+   return;
+ }
+
  await addDoc(collection(db,"products"),{
-  name:name.value,
-  price:price.value,
-  image:image.value,
-  category:category.value,
+  name:n,
+  price:p,
+  image:i,
+  category:c,
   views:0
  });
+
+ name.value="";
+ price.value="";
+ image.value="";
+
+ alert("Товар добавлен!");
  load();
 }
 
 load();
 
 </script>
-
 </body>
 </html>
