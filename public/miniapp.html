@@ -2,11 +2,21 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <title>VapeStock</title>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
@@ -17,66 +27,72 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.db = db;
-window.addDoc = addDoc;
-window.collection = collection;
-window.getDocs = getDocs;
+window.db=db;
+window.fs={collection,addDoc,getDocs,deleteDoc,doc,updateDoc};
 </script>
 
 <style>
 body{
-  background:#0a0014;
-  color:white;
-  font-family:sans-serif;
   margin:0;
+  font-family:sans-serif;
+  background:#0c0018;
+  color:white;
 }
 
 .header{
-  background:linear-gradient(45deg,#7a00ff,#ff00aa);
+  background:linear-gradient(45deg,#6a00ff,#ff00cc);
   padding:20px;
   text-align:center;
-  font-size:28px;
+  font-size:26px;
+  font-weight:bold;
 }
 
 #adminBtn{
   position:fixed;
-  right:10px;
   top:10px;
-  background:#ff00aa;
+  right:10px;
+  background:#ff00cc;
   border:none;
   color:white;
-  padding:8px 12px;
-  border-radius:8px;
+  padding:10px;
+  border-radius:10px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  padding:12px;
 }
 
 .card{
-  background:#160028;
-  margin:15px;
-  padding:15px;
-  border-radius:12px;
+  background:#1a0030;
+  border-radius:14px;
+  padding:10px;
+  box-shadow:0 0 10px #a000ff55;
 }
 
-img{
+.card img{
   width:100%;
-  border-radius:12px;
+  border-radius:10px;
 }
 
-input,select{
+.price{
+  color:#d580ff;
+  font-weight:bold;
+}
+
+.adminBtns button{
+  margin-top:6px;
+  background:#a000ff;
+}
+
+input{
   width:100%;
   padding:10px;
   margin:5px 0;
   border-radius:8px;
   border:none;
-}
-
-button{
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  background:#a000ff;
-  color:white;
-  width:100%;
-  font-size:16px;
 }
 
 #adminPanel{
@@ -93,80 +109,103 @@ button{
 <body>
 
 <div class="header">VapeStock</div>
-
 <button id="adminBtn">⚙️</button>
 
-<div id="products"></div>
+<div class="grid" id="products"></div>
 
-<!-- АДМИНКА -->
+<!-- ADMIN PANEL -->
 <div id="adminPanel">
 <h2>Админка</h2>
 
 <input id="name" placeholder="Название">
 <input id="price" type="number" placeholder="Цена">
 <input id="image" placeholder="Ссылка на фото">
-<select id="category">
-<option>Pod</option>
-<option>Жидкости</option>
-<option>Одноразки</option>
-</select>
 
-<button onclick="addProduct()">Добавить товар</button>
+<button onclick="saveProduct()">Сохранить</button>
 <button onclick="closeAdmin()">Закрыть</button>
 </div>
 
 <script>
 const ADMIN_PASS="lock123612";
 
-document.getElementById("adminBtn").onclick=()=>{
-  let p=prompt("Пароль");
+let editId=null;
+
+// Открытие админки
+adminBtn.onclick=()=>{
+  let p=prompt("Пароль:");
   if(p===ADMIN_PASS){
-    document.getElementById("adminPanel").style.display="block";
-  }else{
-    alert("Неверный пароль");
-  }
+    adminPanel.style.display="block";
+  }else alert("Неверный пароль");
 }
 
 function closeAdmin(){
   adminPanel.style.display="none";
+  editId=null;
 }
 
-async function addProduct(){
+// ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ
+async function saveProduct(){
   const name=nameInput.value;
   const price=Number(priceInput.value);
   const image=imageInput.value;
-  const category=categoryInput.value;
 
   if(!name||!price||!image){
     alert("Заполни всё");
     return;
   }
 
-  await addDoc(collection(db,"products"),{
-    name,
-    price,
-    image,
-    category,
-    views:0
-  });
+  if(editId){
+    await fs.updateDoc(fs.doc(db,"products",editId),{
+      name,price,image
+    });
+    editId=null;
+  }else{
+    await fs.addDoc(fs.collection(db,"products"),{
+      name,price,image,views:0
+    });
+  }
 
-  alert("Добавлено!");
+  alert("Сохранено!");
   loadProducts();
 }
 
+// ЗАГРУЗКА ТОВАРОВ
 async function loadProducts(){
   products.innerHTML="";
-  const snap=await getDocs(collection(db,"products"));
+  const snap=await fs.getDocs(fs.collection(db,"products"));
+
   snap.forEach(d=>{
     const p=d.data();
     products.innerHTML+=`
       <div class="card">
         <img src="${p.image}">
         <h3>${p.name}</h3>
-        <p>${p.price} ₽</p>
+        <div class="price">${p.price} ₽</div>
+
+        <div class="adminBtns">
+          <button onclick="edit('${d.id}','${p.name}','${p.price}','${p.image}')">Редактировать</button>
+          <button onclick="del('${d.id}')">Удалить</button>
+        </div>
       </div>
     `;
   });
+}
+
+// УДАЛЕНИЕ
+async function del(id){
+  if(confirm("Удалить товар?")){
+    await fs.deleteDoc(fs.doc(db,"products",id));
+    loadProducts();
+  }
+}
+
+// РЕДАКТИРОВАНИЕ
+function edit(id,n,p,i){
+  adminPanel.style.display="block";
+  editId=id;
+  nameInput.value=n;
+  priceInput.value=p;
+  imageInput.value=i;
 }
 
 loadProducts();
