@@ -2,245 +2,81 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>VapeStock ULTRA</title>
+<title>VapeStock</title>
 
 <style>
 body{
   margin:0;
-  font-family:sans-serif;
   background:#0b0618;
+  font-family:sans-serif;
   color:white;
 }
 
-/* HEADER */
 .header{
   padding:20px;
   text-align:center;
-  font-size:28px;
-  background:linear-gradient(45deg,#6a00ff,#c800ff);
-  font-weight:bold;
+  font-size:26px;
+  background:linear-gradient(45deg,#7b00ff,#ff00cc);
 }
 
-/* CATEGORY */
-.cats{
-  display:flex;
-  overflow-x:auto;
-  gap:10px;
+.products{
   padding:10px;
 }
-.cat{
-  border:1px solid #a200ff;
-  padding:8px 14px;
-  border-radius:20px;
-  cursor:pointer;
+
+.card{
+  background:#111;
+  padding:12px;
+  border-radius:14px;
+  margin:10px 0;
+  text-align:center;
 }
 
-/* PRODUCT */
-.card{
-  background:#120b2e;
-  margin:12px;
-  border-radius:16px;
-  padding:12px;
-  box-shadow:0 0 15px #6a00ff55;
-}
 .card img{
   width:100%;
-  border-radius:12px;
-}
-.btn{
-  background:linear-gradient(45deg,#7b00ff,#ff00cc);
-  border:none;
-  padding:10px;
   border-radius:10px;
-  color:white;
-  width:100%;
-  margin-top:6px;
 }
 
-/* ADMIN */
-#admin{
-  display:none;
-  padding:15px;
-}
-input,select{
-  width:100%;
-  padding:10px;
-  margin:6px 0;
-  border-radius:10px;
-  border:none;
+.price{
+  color:#c77dff;
+  font-size:18px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">VapeStock ULTRA</div>
+<div class="header">VapeStock</div>
 
-<div class="cats">
-  <div class="cat" onclick="loadProducts()">Все</div>
-  <div class="cat" onclick="filter('pod')">Pod</div>
-  <div class="cat" onclick="filter('liquid')">Жидкости</div>
-  <div class="cat" onclick="filter('disposable')">Одноразки</div>
-</div>
-
-<div id="products"></div>
-
-<center>
-<button class="btn" onclick="openAdmin()">Админка</button>
-</center>
-
-<!-- ADMIN PANEL -->
-<div id="admin">
-<h3>Пароль</h3>
-<input id="pass" placeholder="пароль"/>
-<button class="btn" onclick="login()">Войти</button>
-
-<div id="adminPanel" style="display:none">
-
-<h3>Добавить / редактировать</h3>
-<input id="name" placeholder="Название"/>
-<input id="price" placeholder="Цена"/>
-<input id="img" placeholder="URL фото"/>
-<input type="file" id="file"/>
-<select id="cat">
-<option value="pod">Pod</option>
-<option value="liquid">Жидкость</option>
-<option value="disposable">Одноразка</option>
-</select>
-
-<button class="btn" onclick="upload()">Загрузить фото</button>
-<button class="btn" onclick="saveProduct()">Сохранить</button>
-
-</div>
-</div>
+<div class="products" id="products"></div>
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-getFirestore,collection,getDocs,addDoc,updateDoc,deleteDoc,doc
+  getFirestore,
+  collection,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
   authDomain:"vapestock-3dc76.firebaseapp.com",
-  projectId:"vapestock-3dc76",
-  storageBucket:"vapestock-3dc76.appspot.com",
+  projectId:"vapestock-3dc76"
 };
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-let editId=null;
+const snap=await getDocs(collection(db,"products"));
 
-window.openAdmin=()=>admin.style.display="block";
-
-window.login=()=>{
-  if(pass.value==="lock123612"){
-    adminPanel.style.display="block";
-  }else alert("Неверный пароль");
-};
-
-window.upload=async()=>{
-  const file=fileInput.files[0];
-};
-
-window.upload=async()=>{
-  const file=document.getElementById("file").files[0];
-  if(!file)return alert("Выбери фото");
-
-  const fd=new FormData();
-  fd.append("file",file);
-  fd.append("upload_preset","vapestock");
-
-  const res=await fetch(
-    "https://api.cloudinary.com/v1_1/dhmrlczr8/image/upload",
-    {method:"POST",body:fd}
-  );
-
-  const data=await res.json();
-  img.value=data.secure_url.trim();
-  alert("Фото загружено ✅");
-};
-
-window.saveProduct=async()=>{
-  const nameV=name.value.trim();
-  const priceV=price.value.trim();
-  const imgV=img.value.trim();
-  const catV=cat.value;
-
-  if(!nameV||!priceV||!imgV){
-    alert("Заполни всё");
-    return;
-  }
-
-  if(editId){
-    await updateDoc(doc(db,"products",editId),{
-      name:nameV,price:priceV,image:imgV,category:catV
-    });
-    alert("Обновлено");
-    editId=null;
-  }else{
-    await addDoc(collection(db,"products"),{
-      name:nameV,
-      price:priceV,
-      image:imgV,
-      category:catV,
-      views:0
-    });
-    alert("Добавлено");
-  }
-
-  loadProducts();
-};
-
-window.loadProducts=async()=>{
-  products.innerHTML="";
-  const snap=await getDocs(collection(db,"products"));
-  snap.forEach(d=>{
-    const p=d.data();
-    products.innerHTML+=`
+snap.forEach(d=>{
+  const p=d.data();
+  products.innerHTML+=`
     <div class="card">
       <img src="${p.image}">
       <h3>${p.name}</h3>
-      <p>${p.price} ₽</p>
-      <button class="btn" onclick="edit('${d.id}','${p.name}','${p.price}','${p.image}','${p.category}')">Редактировать</button>
-      <button class="btn" onclick="del('${d.id}')">Удалить</button>
+      <div class="price">${p.price} ₽</div>
     </div>`;
-  });
-};
-
-window.edit=(id,n,pr,i,c)=>{
-  editId=id;
-  name.value=n;
-  price.value=pr;
-  img.value=i;
-  cat.value=c;
-  adminPanel.style.display="block";
-};
-
-window.del=async(id)=>{
-  if(confirm("Удалить?")){
-    await deleteDoc(doc(db,"products",id));
-    loadProducts();
-  }
-};
-
-window.filter=async(catF)=>{
-  products.innerHTML="";
-  const snap=await getDocs(collection(db,"products"));
-  snap.forEach(d=>{
-    const p=d.data();
-    if(p.category!==catF)return;
-    products.innerHTML+=`
-    <div class="card">
-      <img src="${p.image}">
-      <h3>${p.name}</h3>
-      <p>${p.price} ₽</p>
-    </div>`;
-  });
-};
-
-loadProducts();
+});
 </script>
 
 </body>
