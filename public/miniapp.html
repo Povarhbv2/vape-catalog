@@ -185,4 +185,38 @@ async function loadProducts(){
 }
 
 window.addProduct=async function(){
-    const name=nameI
+    const name=nameInput.value;
+    const price=priceInput.value;
+    const image=imageInput.value;
+    const category=categoryInput.value;
+
+    if(!name||!price||!image) return alert("Заполни всё");
+
+    await addDoc(collection(db,"products"),{
+        name,price,image,category
+    });
+
+    loadProducts();
+}
+
+window.remove=async function(id){
+    await deleteDoc(doc(db,"products",id));
+    loadProducts();
+}
+
+// Админ-пароль
+window.adminLogin=function(){
+    const pass=prompt("Пароль:");
+    if(pass==="lock123612"){
+        admin.style.display="block";
+    }else{
+        alert("Неверно");
+    }
+}
+
+loadProducts();
+
+</script>
+
+</body>
+</html>
