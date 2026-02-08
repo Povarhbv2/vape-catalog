@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VapeStock</title>
 
 <script type="module">
@@ -18,90 +17,93 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain: "vapestock-3dc76.firebaseapp.com",
-  projectId: "vapestock-3dc76",
+const firebaseConfig={
+  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+  authDomain:"vapestock-3dc76.firebaseapp.com",
+  projectId:"vapestock-3dc76"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-window.db=db;
 window.fs={collection,addDoc,getDocs,deleteDoc,doc,updateDoc};
+window.db=db;
 </script>
 
 <style>
 body{
-  margin:0;
-  font-family:sans-serif;
-  background:#0c0018;
-  color:white;
+ margin:0;
+ font-family:sans-serif;
+ background:#0b0016;
+ color:white;
 }
 
 .header{
-  background:linear-gradient(45deg,#6a00ff,#ff00cc);
-  padding:20px;
-  text-align:center;
-  font-size:26px;
-  font-weight:bold;
+ background:#7a00ff;
+ padding:18px;
+ text-align:center;
+ font-size:24px;
 }
 
 #adminBtn{
-  position:fixed;
-  top:10px;
-  right:10px;
-  background:#ff00cc;
-  border:none;
-  color:white;
-  padding:10px;
-  border-radius:10px;
+ position:fixed;
+ top:10px;
+ right:10px;
+ padding:8px 12px;
+ border:none;
+ border-radius:8px;
+ background:#ff00aa;
+ color:white;
 }
 
 .grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:12px;
-  padding:12px;
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:10px;
+ padding:10px;
 }
 
 .card{
-  background:#1a0030;
-  border-radius:14px;
-  padding:10px;
-  box-shadow:0 0 10px #a000ff55;
+ background:#18002b;
+ padding:10px;
+ border-radius:12px;
 }
 
 .card img{
-  width:100%;
-  border-radius:10px;
+ width:100%;
+ border-radius:10px;
 }
 
 .price{
-  color:#d580ff;
-  font-weight:bold;
+ color:#d580ff;
+ font-weight:bold;
 }
 
-.adminBtns button{
-  margin-top:6px;
-  background:#a000ff;
+button{
+ width:100%;
+ padding:10px;
+ border:none;
+ border-radius:8px;
+ margin-top:6px;
+ background:#a000ff;
+ color:white;
 }
 
 input{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:8px;
-  border:none;
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+ border-radius:8px;
+ border:none;
 }
 
 #adminPanel{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:#000000ee;
-  padding:20px;
-  overflow:auto;
+ display:none;
+ position:fixed;
+ inset:0;
+ background:#000000ee;
+ padding:20px;
+ overflow:auto;
 }
 </style>
 </head>
@@ -113,102 +115,96 @@ input{
 
 <div class="grid" id="products"></div>
 
-<!-- ADMIN PANEL -->
+<!-- ADMIN -->
 <div id="adminPanel">
 <h2>Админка</h2>
 
 <input id="name" placeholder="Название">
-<input id="price" type="number" placeholder="Цена">
+<input id="price" placeholder="Цена">
 <input id="image" placeholder="Ссылка на фото">
 
-<button onclick="saveProduct()">Сохранить</button>
+<button onclick="save()">Сохранить</button>
 <button onclick="closeAdmin()">Закрыть</button>
 </div>
 
 <script>
-const ADMIN_PASS="lock123612";
-
+const PASS="lock123612";
 let editId=null;
 
-// Открытие админки
 adminBtn.onclick=()=>{
-  let p=prompt("Пароль:");
-  if(p===ADMIN_PASS){
-    adminPanel.style.display="block";
-  }else alert("Неверный пароль");
+ let p=prompt("Пароль:");
+ if(p===PASS) adminPanel.style.display="block";
 }
 
 function closeAdmin(){
-  adminPanel.style.display="none";
-  editId=null;
+ adminPanel.style.display="none";
+ editId=null;
 }
 
-// ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ
-async function saveProduct(){
-  const name=nameInput.value;
-  const price=Number(priceInput.value);
-  const image=imageInput.value;
+async function save(){
+ const n=nameInput.value.trim();
+ const p=Number(priceInput.value);
+ const i=imageInput.value.trim();
 
-  if(!name||!price||!image){
-    alert("Заполни всё");
-    return;
-  }
+ if(!n||!p||!i){
+  alert("Заполни всё");
+  return;
+ }
 
-  if(editId){
-    await fs.updateDoc(fs.doc(db,"products",editId),{
-      name,price,image
-    });
-    editId=null;
-  }else{
-    await fs.addDoc(fs.collection(db,"products"),{
-      name,price,image,views:0
-    });
-  }
-
-  alert("Сохранено!");
-  loadProducts();
-}
-
-// ЗАГРУЗКА ТОВАРОВ
-async function loadProducts(){
-  products.innerHTML="";
-  const snap=await fs.getDocs(fs.collection(db,"products"));
-
-  snap.forEach(d=>{
-    const p=d.data();
-    products.innerHTML+=`
-      <div class="card">
-        <img src="${p.image}">
-        <h3>${p.name}</h3>
-        <div class="price">${p.price} ₽</div>
-
-        <div class="adminBtns">
-          <button onclick="edit('${d.id}','${p.name}','${p.price}','${p.image}')">Редактировать</button>
-          <button onclick="del('${d.id}')">Удалить</button>
-        </div>
-      </div>
-    `;
+ if(editId){
+  await fs.updateDoc(fs.doc(db,"products",editId),{
+   name:n,price:p,image:i
   });
+  editId=null;
+ }else{
+  await fs.addDoc(fs.collection(db,"products"),{
+   name:n,price:p,image:i
+  });
+ }
+
+ nameInput.value="";
+ priceInput.value="";
+ imageInput.value="";
+
+ load();
+ alert("Готово");
 }
 
-// УДАЛЕНИЕ
-async function del(id){
-  if(confirm("Удалить товар?")){
-    await fs.deleteDoc(fs.doc(db,"products",id));
-    loadProducts();
-  }
+async function load(){
+ products.innerHTML="";
+ const snap=await fs.getDocs(fs.collection(db,"products"));
+
+ snap.forEach(d=>{
+  const x=d.data();
+
+  products.innerHTML+=`
+   <div class="card">
+    <img src="${x.image}">
+    <h3>${x.name}</h3>
+    <div class="price">${x.price} ₽</div>
+
+    <button onclick="edit('${d.id}','${x.name}','${x.price}','${x.image}')">Изменить</button>
+    <button onclick="del('${d.id}')">Удалить</button>
+   </div>`;
+ });
 }
 
-// РЕДАКТИРОВАНИЕ
 function edit(id,n,p,i){
-  adminPanel.style.display="block";
-  editId=id;
-  nameInput.value=n;
-  priceInput.value=p;
-  imageInput.value=i;
+ editId=id;
+ adminPanel.style.display="block";
+ nameInput.value=n;
+ priceInput.value=p;
+ imageInput.value=i;
 }
 
-loadProducts();
+async function del(id){
+ if(confirm("Удалить?")){
+  await fs.deleteDoc(fs.doc(db,"products",id));
+  load();
+ }
+}
+
+load();
 </script>
 
 </body>
