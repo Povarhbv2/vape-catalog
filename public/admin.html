@@ -32,29 +32,28 @@ button{
  border-radius:12px;
 }
 
-.del{
- background:red;
-}
+.del{background:red}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
 <div id="loginBox">
-<h2>Вход в админку</h2>
+<h2>Вход</h2>
 <input id="passInput" placeholder="Пароль">
 <button id="loginBtn">Войти</button>
 </div>
 
-<!-- PANEL -->
 <div id="panel" style="display:none">
 
 <h2>Добавить товар</h2>
 
 <input id="name" placeholder="Название">
 <input id="price" placeholder="Цена">
-<input id="image" placeholder="URL картинки">
+
+<!-- Загрузка фото -->
+<input type="file" id="fileInput" accept="image/*">
+<input id="image" placeholder="Ссылка появится автоматически">
 
 <select id="category">
 <option value="pod">Pod</option>
@@ -65,7 +64,7 @@ button{
 
 <button id="addBtn">Добавить</button>
 
-<h2>Все товары</h2>
+<h2>Товары</h2>
 <div id="list"></div>
 
 </div>
@@ -76,47 +75,59 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+import { getStorage, ref, uploadBytes, getDownloadURL }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
 // Firebase
 const app=initializeApp({
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
  authDomain:"vapestock-3dc76.firebaseapp.com",
- projectId:"vapestock-3dc76"
+ projectId:"vapestock-3dc76",
+ storageBucket:"vapestock-3dc76.appspot.com"
 });
+
 const db=getFirestore(app);
+const storage=getStorage(app);
 
 // LOGIN
-document.getElementById("loginBtn").onclick=()=>{
- const pass=document.getElementById("passInput").value;
-
- if(pass==="lock123612"){
-   document.getElementById("loginBox").style.display="none";
-   document.getElementById("panel").style.display="block";
+loginBtn.onclick=()=>{
+ if(passInput.value==="lock123612"){
+   loginBox.style.display="none";
+   panel.style.display="block";
    load();
- } else {
-   alert("Неверный пароль");
- }
+ } else alert("Неверный пароль");
 };
 
-// ADD PRODUCT
-document.getElementById("addBtn").onclick=async()=>{
- const n=name.value.trim();
- const p=price.value.trim();
- const i=image.value.trim();
- const c=category.value;
+// 📸 ЗАГРУЗКА ФОТО
+fileInput.onchange=async(e)=>{
+ const file=e.target.files[0];
+ if(!file) return;
 
- if(!n||!p||!i){
+ const storageRef=ref(storage,"products/"+Date.now());
+ await uploadBytes(storageRef,file);
+
+ const url=await getDownloadURL(storageRef);
+ image.value=url;
+
+ alert("Фото загружено!");
+};
+
+// ➕ ДОБАВЛЕНИЕ
+addBtn.onclick=async()=>{
+ if(!name.value||!price.value||!image.value){
    alert("Заполни всё");
    return;
  }
 
  await addDoc(collection(db,"products"),{
-  name:n,
-  price:p,
-  image:i,
-  category:c
+  name:name.value,
+  price:price.value,
+  image:image.value,
+  category:category.value
  });
 
  alert("Добавлено!");
+
  name.value="";
  price.value="";
  image.value="";
@@ -124,7 +135,7 @@ document.getElementById("addBtn").onclick=async()=>{
  load();
 };
 
-// LOAD PRODUCTS
+// 📦 ЗАГРУЗКА СПИСКА
 async function load(){
  list.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
@@ -135,8 +146,8 @@ async function load(){
   const div=document.createElement("div");
   div.className="card";
   div.innerHTML=`
-    ${p.name} — ${p.price}
-    <button class="del">Удалить</button>
+   ${p.name} — ${p.price}
+   <button class="del">Удалить</button>
   `;
 
   div.querySelector(".del").onclick=async()=>{
