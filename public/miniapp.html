@@ -4,61 +4,193 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
 <style>
 body{
-  background:#111;
-  color:white;
-  text-align:center;
+  margin:0;
   font-family:Arial;
-  padding:50px;
+  background:#0b0b15;
+  color:white;
+}
+
+h2{
+  text-align:center;
+  color:#c86bff;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:10px;
+}
+
+.card{
+  background:#141426;
+  border:1px solid #7b2cff;
+  border-radius:12px;
+  padding:10px;
+}
+
+.card img{
+  width:100%;
+  height:120px;
+  object-fit:cover;
+  border-radius:8px;
 }
 
 button{
-  padding:20px;
-  font-size:20px;
-  background:purple;
-  color:white;
+  background:#a100ff;
   border:none;
+  color:white;
+  padding:10px;
+  width:100%;
   border-radius:10px;
+  margin-top:6px;
+}
+
+.cartBtn{
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  right:10px;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:#000;
+  padding:15px;
+  display:none;
+}
+
+input{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border-radius:8px;
+  border:none;
 }
 </style>
 </head>
 
 <body>
 
-<h1>TEST MINI APP</h1>
+<h2>💨 VapeStock</h2>
 
-<button onclick="send()">ОТПРАВИТЬ ТЕСТ</button>
+<div id="products" class="grid"></div>
 
-<script>
-const tg = window.Telegram?.WebApp;
+<button class="cartBtn" onclick="openCart()">🛒 Корзина</button>
 
-if(tg){
-  tg.expand();
-  tg.ready();
+<div id="modal" class="modal"></div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig={
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+let CART=[];
+const prodDiv=document.getElementById("products");
+const modal=document.getElementById("modal");
+
+async function load(){
+ const snap=await getDocs(collection(db,"products"));
+
+ snap.forEach(doc=>{
+   const p=doc.data();
+
+   const div=document.createElement("div");
+   div.className="card";
+
+   div.innerHTML=`
+     <img src="${p.image}">
+     <b>${p.name}</b>
+     <p>${p.price}</p>
+     <button onclick='add(${JSON.stringify(p)})'>В корзину</button>
+   `;
+
+   prodDiv.appendChild(div);
+ });
 }
 
-function send(){
-
-  alert("Кнопка нажата");
-
-  if(!tg){
-    alert("НЕ Telegram WebApp!");
-    return;
-  }
-
-  alert("Telegram найден!");
-
-  tg.sendData("TEST_DATA");
-
-  setTimeout(()=>{
-    tg.close();
-  },500);
+window.add=p=>{
+ CART.push(p);
+ alert("Добавлено!");
 }
+
+window.openCart=()=>{
+ modal.style.display="block";
+
+ let html="<h3>Корзина</h3>";
+ let sum=0;
+
+ CART.forEach(p=>{
+   html+=`<p>${p.name} — ${p.price}</p>`;
+   sum+=Number(p.price.replace(/\D/g,''));
+ });
+
+ html+=`
+ <p>Сумма: ${sum} ₽</p>
+
+ <input id="fio" placeholder="ФИО">
+ <input id="phone" placeholder="Телефон">
+
+ <button onclick="checkout()">Оформить заказ</button>
+ <button onclick="modal.style.display='none'">Закрыть</button>
+ `;
+
+ modal.innerHTML=html;
+}
+
+window.checkout=async()=>{
+
+ if(CART.length===0){
+   alert("Корзина пуста");
+   return;
+ }
+
+ const fio=document.getElementById("fio").value||"Не указано";
+ const phone=document.getElementById("phone").value||"Не указан";
+
+ let items="";
+ let sum=0;
+
+ CART.forEach(p=>{
+   items+=`${p.name} ${p.price}\n`;
+   sum+=Number(p.price.replace(/\D/g,''));
+ });
+
+ const orderText=`
+Покупатель: ${fio}
+Телефон: ${phone}
+
+${items}
+Сумма: ${sum} ₽
+`;
+
+ await fetch("http://localhost:3001/order",{
+   method:"POST",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+     text:orderText
+   })
+ });
+
+ alert("✅ Заказ отправлен!");
+ modal.style.display="none";
+ CART=[];
+}
+
+load();
+
 </script>
-
 </body>
 </html>
-
