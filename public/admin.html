@@ -1,31 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Admin</title>
+
 <style>
 body{
- background:#070010;
- color:white;
- font-family:Arial;
- padding:20px
+  background:#0b0618;
+  color:white;
+  font-family:sans-serif;
+  padding:15px;
 }
-input,button,select{
- width:100%;
- padding:14px;
- margin:8px 0;
- border-radius:12px;
- border:none;
- font-size:16px;
+
+input,select,button{
+  width:100%;
+  padding:12px;
+  margin:6px 0;
+  border-radius:10px;
+  border:none;
 }
+
 button{
- background:linear-gradient(45deg,#7a00ff,#d000ff);
- color:white;
-}
-.preview{
- width:100%;
- border-radius:14px;
- margin-top:10px;
- display:none;
+  background:linear-gradient(45deg,#7b00ff,#ff00cc);
+  color:white;
 }
 </style>
 </head>
@@ -33,97 +30,99 @@ button{
 <body>
 
 <h2>Админ вход</h2>
-<input id="pass" placeholder="Пароль">
+<input id="pass" placeholder="Пароль"/>
 <button onclick="login()">Войти</button>
 
 <div id="panel" style="display:none">
 
-<h3>Добавить товар</h3>
+<h3>Товар</h3>
 
-<input id="name" placeholder="Название">
-<input id="price" placeholder="Цена">
+<input id="name" placeholder="Название"/>
+<input id="price" placeholder="Цена"/>
+<input id="img" placeholder="URL фото"/>
 
-<input type="file" id="file" accept="image/*">
+<input type="file" id="file"/>
 
-<img id="preview" class="preview">
-
-<input id="image" placeholder="URL фото">
-
-<select id="category">
-<option value="pod">Pod-система</option>
+<select id="cat">
+<option value="pod">Pod</option>
 <option value="liquid">Жидкость</option>
 <option value="disposable">Одноразка</option>
 </select>
 
-<button onclick="add()">Добавить товар</button>
+<button onclick="upload()">Загрузить фото</button>
+<button onclick="save()">Сохранить</button>
+
+<hr>
+<div id="list"></div>
 
 </div>
 
 <script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getFirestore,collection,getDocs,addDoc,deleteDoc,doc} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { initializeApp } from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+const firebaseConfig={
+  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+  authDomain:"vapestock-3dc76.firebaseapp.com",
+  projectId:"vapestock-3dc76",
+};
 
-import { getFirestore, collection, addDoc }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const app=initializeApp({
- apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
- authDomain:"vapestock-3dc76.firebaseapp.com",
- projectId:"vapestock-3dc76"
-});
-
+const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-const CLOUD_NAME="dhmrlczr8";
-
 window.login=()=>{
- if(pass.value==="lock123612"){
-  panel.style.display="block";
- }else{
-  alert("Неверный пароль");
- }
+  if(pass.value==="lock123612"){
+    panel.style.display="block";
+    load();
+  }
 };
 
-file.onchange=async()=>{
- const f=file.files[0];
- if(!f) return;
+window.upload=async()=>{
+  const f=file.files[0];
+  if(!f) return;
 
- const form=new FormData();
- form.append("file",f);
- form.append("upload_preset","unsigned_preset");
+  const fd=new FormData();
+  fd.append("file",f);
+  fd.append("upload_preset","vapestock");
 
- const res=await fetch(
-  `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-  {method:"POST",body:form}
- );
+  const res=await fetch(
+    "https://api.cloudinary.com/v1_1/dhmrlczr8/image/upload",
+    {method:"POST",body:fd}
+  );
 
- const data=await res.json();
-
- image.value=data.secure_url;
- preview.src=data.secure_url;
- preview.style.display="block";
-
- alert("Фото загружено!");
+  const data=await res.json();
+  img.value=data.secure_url;
+  alert("Фото загружено");
 };
 
-window.add=async()=>{
- if(!name.value||!price.value||!image.value){
-  alert("Заполни всё!");
-  return;
- }
-
- await addDoc(collection(db,"products"),{
-  name:name.value,
-  price:price.value,
-  image:image.value,
-  category:category.value,
-  views:0
- });
-
- alert("Товар добавлен!");
+window.save=async()=>{
+  await addDoc(collection(db,"products"),{
+    name:name.value,
+    price:price.value,
+    image:img.value,
+    category:cat.value
+  });
+  load();
 };
 
+window.load=async()=>{
+  list.innerHTML="";
+  const snap=await getDocs(collection(db,"products"));
+  snap.forEach(d=>{
+    const p=d.data();
+    list.innerHTML+=`
+    <div>
+      ${p.name} — ${p.price}
+      <button onclick="del('${d.id}')">Удалить</button>
+    </div>`;
+  });
+};
+
+window.del=async(id)=>{
+  await deleteDoc(doc(db,"products",id));
+  load();
+};
 </script>
+
 </body>
 </html>
