@@ -6,16 +6,17 @@
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<title>VapeStock PRO</title>
+<title>VapeStock</title>
 
 <style>
 body{
     margin:0;
     font-family:Arial;
-    background:#07070f;
+    background:#06060f;
     color:white;
 }
 
+/* HEADER */
 header{
     padding:15px;
     text-align:center;
@@ -24,59 +25,108 @@ header{
     box-shadow:0 0 20px #a000ff;
 }
 
-.category-bar{
+/* SEARCH */
+.search{
+    padding:10px;
+}
+.search input{
+    width:100%;
+    padding:12px;
+    border-radius:12px;
+    border:none;
+    background:#111122;
+    color:white;
+}
+
+/* CATEGORIES */
+.catbar{
     display:flex;
+    overflow:auto;
     gap:10px;
     padding:10px;
-    overflow:auto;
 }
-
-.cat-btn{
+.cat{
     background:#1a1a2e;
-    border:1px solid #6a00ff;
-    color:white;
-    padding:8px 12px;
+    border:1px solid #a000ff;
+    padding:8px 14px;
     border-radius:20px;
     cursor:pointer;
+    transition:0.3s;
+}
+.cat:hover{
+    box-shadow:0 0 10px #a000ff;
 }
 
+/* CATALOG */
 .catalog{
     padding:15px;
 }
 
+/* CARD */
 .card{
     background:#111122;
-    padding:15px;
+    padding:10px;
+    border-radius:14px;
     margin-bottom:15px;
-    border-radius:12px;
     box-shadow:0 0 15px #6a00ff55;
+    cursor:pointer;
+    transform:scale(0.95);
+    opacity:0;
+    animation:fadeIn 0.4s forwards;
+}
+@keyframes fadeIn{
+    to{transform:scale(1);opacity:1;}
 }
 
 .card img{
     width:100%;
-    border-radius:10px;
+    border-radius:12px;
 }
 
+/* PRODUCT PAGE */
+.productView{
+    display:none;
+    padding:15px;
+    animation:slideUp 0.4s;
+}
+@keyframes slideUp{
+    from{transform:translateY(30px);opacity:0;}
+    to{transform:translateY(0);opacity:1;}
+}
+
+.bigImg{
+    width:100%;
+    border-radius:15px;
+    box-shadow:0 0 20px #a000ff;
+}
+
+.price{
+    font-size:24px;
+    color:#ff4df0;
+}
+
+/* BUTTON */
 button{
-    background:linear-gradient(45deg,#a000ff,#d000ff);
+    background:linear-gradient(45deg,#a000ff,#e100ff);
     border:none;
-    padding:10px;
+    padding:12px;
     color:white;
-    border-radius:8px;
+    border-radius:10px;
+    margin-top:10px;
     cursor:pointer;
-    margin-top:5px;
 }
 
+/* ADMIN */
 .admin{
     display:none;
     padding:15px;
-    background:#0f0f1a;
+    background:#0e0e18;
 }
 
 input,select{
     width:100%;
     padding:10px;
-    margin:5px 0;
+    margin:6px 0;
     border-radius:6px;
     border:none;
 }
@@ -86,14 +136,20 @@ input,select{
 <body>
 
 <header>
-VapeStock PRO
+VapeStock 💜
 <br>
-<button onclick="adminLogin()">Админка</button>
+<button onclick="login()">Админка</button>
 </header>
 
-<div class="category-bar" id="cats"></div>
+<div class="search">
+<input id="search" placeholder="Поиск..." oninput="load()">
+</div>
+
+<div class="catbar" id="catbar"></div>
 
 <div class="catalog" id="catalog"></div>
+
+<div class="productView" id="productView"></div>
 
 <div class="admin" id="admin">
 <h3>Добавить товар</h3>
@@ -103,7 +159,7 @@ VapeStock PRO
 <input id="image" placeholder="URL картинки">
 
 <select id="category">
-<option value="pod">Pod</option>
+<option value="pod">Pod-системы</option>
 <option value="liquid">Жидкости</option>
 <option value="disposable">Одноразки</option>
 <option value="coil">Испарители</option>
@@ -112,109 +168,122 @@ VapeStock PRO
 <button onclick="addProduct()">Добавить</button>
 
 <hr>
-<h3>Удаление</h3>
 <div id="adminList"></div>
 </div>
 
 <script type="module">
 
-const tg = window.Telegram.WebApp;
+const tg=window.Telegram.WebApp;
 tg.expand();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain: "vapestock-3dc76.firebaseapp.com",
-  projectId: "vapestock-3dc76",
-  storageBucket: "vapestock-3dc76.appspot.com",
-  messagingSenderId: "132714146262",
-  appId: "1:132714146262:web:70a32b2d068b8f2c155c77"
+const firebaseConfig={
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76",
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
 const catalog=document.getElementById("catalog");
+const productView=document.getElementById("productView");
 const adminList=document.getElementById("adminList");
-const catsDiv=document.getElementById("cats");
 
-let currentCat="all";
+let current="all";
 
-const categories=["all","pod","liquid","disposable","coil"];
+const categories={
+ all:"Все",
+ pod:"Pod-системы",
+ liquid:"Жидкости",
+ disposable:"Одноразки",
+ coil:"Испарители"
+};
 
-categories.forEach(c=>{
-    const b=document.createElement("button");
-    b.className="cat-btn";
-    b.innerText=c;
-    b.onclick=()=>{currentCat=c;loadProducts();}
-    catsDiv.appendChild(b);
-});
+for(const key in categories){
+ const b=document.createElement("div");
+ b.className="cat";
+ b.innerText=categories[key];
+ b.onclick=()=>{current=key;load();}
+ catbar.appendChild(b);
+}
 
-async function loadProducts(){
-    catalog.innerHTML="";
-    adminList.innerHTML="";
+async function load(){
+ catalog.innerHTML="";
+ adminList.innerHTML="";
+ productView.style.display="none";
+ catalog.style.display="block";
 
-    const snap=await getDocs(collection(db,"products"));
+ const search=document.getElementById("search").value.toLowerCase();
 
-    snap.forEach(d=>{
-        const p=d.data();
-        const id=d.id;
+ const snap=await getDocs(collection(db,"products"));
 
-        if(currentCat!="all" && p.category!=currentCat) return;
+ snap.forEach(d=>{
+  const p=d.data();
+  const id=d.id;
 
-        const div=document.createElement("div");
-        div.className="card";
-        div.innerHTML=`
-            <img src="${p.image}">
-            <h3>${p.name}</h3>
-            <p>${p.price}</p>
-            <small>${p.category}</small>
-        `;
-        catalog.appendChild(div);
+  if(current!="all" && p.category!=current) return;
+  if(!p.name.toLowerCase().includes(search)) return;
 
-        const ad=document.createElement("div");
-        ad.innerHTML=`
-            ${p.name}
-            <button onclick="remove('${id}')">Удалить</button>
-        `;
-        adminList.appendChild(ad);
-    });
+  const div=document.createElement("div");
+  div.className="card";
+  div.innerHTML=`
+   <img src="${p.image}">
+   <h3>${p.name}</h3>
+   <p>${p.price}</p>
+  `;
+  div.onclick=()=>showProduct(p);
+  catalog.appendChild(div);
+
+  const ad=document.createElement("div");
+  ad.innerHTML=`${p.name} <button onclick="del('${id}')">❌</button>`;
+  adminList.appendChild(ad);
+ });
+}
+
+window.showProduct=function(p){
+ catalog.style.display="none";
+ productView.style.display="block";
+ productView.innerHTML=`
+  <button onclick="back()">⬅ Назад</button>
+  <img class="bigImg" src="${p.image}">
+  <h2>${p.name}</h2>
+  <div class="price">${p.price}</div>
+  <p>Категория: ${categories[p.category]}</p>
+ `;
+}
+
+window.back=function(){
+ productView.style.display="none";
+ catalog.style.display="block";
 }
 
 window.addProduct=async function(){
-    const name=nameInput.value;
-    const price=priceInput.value;
-    const image=imageInput.value;
-    const category=categoryInput.value;
-
-    if(!name||!price||!image) return alert("Заполни всё");
-
-    await addDoc(collection(db,"products"),{
-        name,price,image,category
-    });
-
-    loadProducts();
+ await addDoc(collection(db,"products"),{
+  name:name.value,
+  price:price.value,
+  image:image.value,
+  category:category.value
+ });
+ load();
 }
 
-window.remove=async function(id){
-    await deleteDoc(doc(db,"products",id));
-    loadProducts();
+window.del=async function(id){
+ await deleteDoc(doc(db,"products",id));
+ load();
 }
 
-// Админ-пароль
-window.adminLogin=function(){
-    const pass=prompt("Пароль:");
-    if(pass==="lock123612"){
-        admin.style.display="block";
-    }else{
-        alert("Неверно");
-    }
+// 🔐 НОВЫЙ ПАРОЛЬ
+window.login=function(){
+ if(prompt("Пароль")==="lock123612"){
+  admin.style.display="block";
+ }
 }
 
-loadProducts();
+load();
 
 </script>
 
