@@ -54,16 +54,7 @@ button{
   inset:0;
   background:#000;
   display:none;
-  overflow:auto;
   padding:15px;
-}
-
-input{
-  width:100%;
-  padding:10px;
-  margin:5px 0;
-  border-radius:8px;
-  border:none;
 }
 </style>
 
@@ -99,4 +90,78 @@ tg.expand();
 
 let CART=[];
 const prodDiv=document.getElementById("products");
-const modal=document.getElementB
+const modal=document.getElementById("modal");
+
+async function load(){
+ prodDiv.innerHTML="";
+ const snap=await getDocs(collection(db,"products"));
+
+ snap.forEach(d=>{
+   const p=d.data();
+
+   const div=document.createElement("div");
+   div.className="card";
+
+   div.innerHTML=`
+     <img src="${p.image}">
+     <h4>${p.name}</h4>
+     <p>${p.price}</p>
+     <button onclick='add(${JSON.stringify(p)})'>В корзину</button>
+   `;
+
+   prodDiv.appendChild(div);
+ });
+}
+
+window.add=p=>{
+ CART.push(p);
+ alert("Добавлено в корзину");
+}
+
+window.openCart=()=>{
+ modal.style.display="block";
+
+ let html="<h2>Корзина</h2>";
+ let sum=0;
+
+ CART.forEach(p=>{
+   html+=`<p>${p.name} — ${p.price}</p>`;
+   sum+=Number(p.price.replace(/\D/g,''));
+ });
+
+ html+=`
+ <input id="fio" placeholder="ФИО">
+ <input id="phone" placeholder="Телефон">
+ <button onclick="checkout()">Заказать</button>
+ `;
+
+ modal.innerHTML=html;
+}
+
+window.checkout=()=>{
+ if(CART.length===0){
+   alert("Корзина пуста");
+   return;
+ }
+
+ let items="";
+ let sum=0;
+
+ CART.forEach(p=>{
+   items+=`${p.name} ${p.price}\n`;
+   sum+=Number(p.price.replace(/\D/g,''));
+ });
+
+ tg.sendData(JSON.stringify({
+   buyerMsg:`Заказ на ${sum} ₽ принят!`,
+   sellerMsg:`Новый заказ:\n${items}\nСумма: ${sum} ₽`
+ }));
+
+ tg.close();
+}
+
+load();
+
+</script>
+</body>
+</html>
