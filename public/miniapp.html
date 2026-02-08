@@ -20,34 +20,47 @@ body{
   text-shadow:0 0 15px #a100ff;
 }
 
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  padding:12px;
+}
+
 .card{
   background:#141420;
-  border-radius:20px;
-  padding:15px;
-  margin:15px;
+  border-radius:16px;
+  padding:12px;
   border:1px solid #6a00ff;
-  box-shadow:0 0 20px #6a00ff55;
 }
 
 .card img{
   width:100%;
-  height:150px;
+  height:120px;
   object-fit:cover;
-  border-radius:12px;
+  border-radius:10px;
 }
 
 button{
-  margin-top:10px;
   background:#a100ff;
   border:none;
   color:white;
-  padding:12px;
+  padding:10px;
   border-radius:10px;
   width:100%;
-  font-size:16px;
+  margin-top:8px;
 }
 
-/* экран товара */
+.cartBtn{
+  position:fixed;
+  bottom:15px;
+  right:15px;
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  font-size:20px;
+}
+
 .modal{
   position:fixed;
   top:0;
@@ -57,17 +70,15 @@ button{
   background:#000;
   display:none;
   overflow:auto;
+  padding:10px;
 }
 
-.modal img{
+input{
   width:100%;
-  height:250px;
-  object-fit:cover;
-}
-
-.back{
-  background:#333;
-  margin:10px;
+  padding:10px;
+  margin:5px 0;
+  border-radius:8px;
+  border:none;
 }
 </style>
 
@@ -77,19 +88,24 @@ button{
 <body>
 
 <h2 class="title">💨 VapeStock</h2>
-<div id="catalog"></div>
+
+<div id="categories" class="grid"></div>
+<div id="products" class="grid"></div>
+
+<button class="cartBtn" onclick="openCart()">🛒</button>
+<button onclick="openAdmin()">ADMIN</button>
 
 <div id="modal" class="modal"></div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain: "vapestock-3dc76.firebaseapp.com",
-  projectId: "vapestock-3dc76",
+  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+  authDomain:"vapestock-3dc76.firebaseapp.com",
+  projectId:"vapestock-3dc76"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -98,59 +114,112 @@ const db = getFirestore(app);
 const tg = window.Telegram?.WebApp;
 if(tg) tg.expand();
 
-const catalog = document.getElementById("catalog");
-const modal = document.getElementById("modal");
+let CART=[];
+let ALL=[];
+
+const catDiv=document.getElementById("categories");
+const prodDiv=document.getElementById("products");
+const modal=document.getElementById("modal");
 
 async function load(){
-  const snap = await getDocs(collection(db,"products"));
+  const snap=await getDocs(collection(db,"products"));
+  ALL=[];
+  snap.forEach(d=>ALL.push(d.data()));
 
-  snap.forEach(doc=>{
-    const p = doc.data();
+  showCategories();
+}
 
-    const div = document.createElement("div");
-    div.className="card";
+function showCategories(){
+  catDiv.innerHTML="";
+  const cats=[...new Set(ALL.map(p=>p.category))];
 
-    div.innerHTML=`
-      <img src="${p.image}">
-      <h3>${p.name}</h3>
-      <p>${p.price}</p>
-    `;
-
-    div.onclick=()=>openProduct(p);
-    catalog.appendChild(div);
+  cats.forEach(c=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.innerHTML=`<h3>${c}</h3>`;
+    d.onclick=()=>showProducts(c);
+    catDiv.appendChild(d);
   });
 }
 
-window.openProduct=function(p){
-  modal.style.display="block";
+function showProducts(cat){
+  prodDiv.innerHTML="";
+  ALL.filter(p=>p.category==cat).forEach(p=>{
+    const d=document.createElement("div");
+    d.className="card";
+    d.innerHTML=`
+      <img src="${p.image}">
+      <h4>${p.name}</h4>
+      <p>${p.price}</p>
+      <button onclick='event.stopPropagation();addCart(${JSON.stringify(p)})'>В корзину</button>
+    `;
+    d.onclick=()=>openProduct(p);
+    prodDiv.appendChild(d);
+  });
+}
 
+window.openProduct=p=>{
+  modal.style.display="block";
   modal.innerHTML=`
-    <button class="back" onclick="closeModal()">⬅ Назад</button>
-    <img src="${p.image}">
-    <div class="card">
-      <h2>${p.name}</h2>
-      <h3>${p.price}</h3>
-      <p>В наличии: ${p.stock}</p>
-      <button onclick='order(${JSON.stringify(p)})'>Добавить в корзину</button>
-    </div>
+    <button onclick="closeModal()">Назад</button>
+    <img src="${p.image}" style="width:100%">
+    <h2>${p.name}</h2>
+    <h3>${p.price}</h3>
+    <button onclick='addCart(${JSON.stringify(p)})'>В корзину</button>
   `;
 }
 
-window.closeModal=function(){
-  modal.style.display="none";
+window.closeModal=()=>modal.style.display="none";
+
+window.addCart=p=>{
+  CART.push(p);
+  alert("Добавлено!");
 }
 
-window.order=function(p){
+window.openCart=()=>{
+  modal.style.display="block";
+  let html="<h2>Корзина</h2>";
+  CART.forEach(p=>html+=`<p>${p.name} — ${p.price}</p>`);
+  html+=`<button onclick="checkout()">Оформить заказ</button>`;
+  modal.innerHTML=html;
+}
+
+window.checkout=()=>{
   if(tg){
-    tg.sendData(JSON.stringify(p));
-  }else{
-    alert("Заказ отправлен");
+    tg.sendData(JSON.stringify(CART));
   }
+  alert("Заказ отправлен!");
+  CART=[];
+  closeModal();
+}
+
+window.openAdmin=()=>{
+  modal.style.display="block";
+  modal.innerHTML=`
+    <h2>Добавить товар</h2>
+    <input id="n" placeholder="Название">
+    <input id="p" placeholder="Цена">
+    <input id="i" placeholder="Ссылка на фото">
+    <input id="c" placeholder="Категория">
+    <button onclick="save()">Сохранить</button>
+  `;
+}
+
+window.save=async()=>{
+  await addDoc(collection(db,"products"),{
+    name:n.value,
+    price:p.value,
+    image:i.value,
+    category:c.value,
+    stock:10
+  });
+  alert("Товар добавлен");
+  closeModal();
+  load();
 }
 
 load();
 
 </script>
-
 </body>
 </html>
