@@ -19,11 +19,8 @@ input,select,button{
  border:none;
 }
 
-button{
- background:#a000ff;
- color:white;
- cursor:pointer;
-}
+button{background:#a000ff;color:white}
+.del{background:red}
 
 .card{
  background:#140022;
@@ -32,7 +29,17 @@ button{
  border-radius:12px;
 }
 
-.del{background:red}
+.progress{
+ height:8px;
+ background:#333;
+ border-radius:10px;
+ overflow:hidden;
+}
+.bar{
+ height:100%;
+ width:0%;
+ background:#a000ff;
+}
 </style>
 </head>
 
@@ -41,7 +48,7 @@ button{
 <div id="loginBox">
 <h2>Вход</h2>
 <input id="passInput" placeholder="Пароль">
-<button id="loginBtn">Войти</button>
+<button onclick="login()">Войти</button>
 </div>
 
 <div id="panel" style="display:none">
@@ -51,9 +58,11 @@ button{
 <input id="name" placeholder="Название">
 <input id="price" placeholder="Цена">
 
-<!-- Загрузка фото -->
-<input type="file" id="fileInput" accept="image/*">
-<input id="image" placeholder="Ссылка появится автоматически">
+<input type="file" id="fileInput" accept="image/*" multiple>
+
+<div class="progress"><div class="bar" id="bar"></div></div>
+
+<input id="image" placeholder="Ссылки появятся тут">
 
 <select id="category">
 <option value="pod">Pod</option>
@@ -62,7 +71,7 @@ button{
 <option value="coil">Испаритель</option>
 </select>
 
-<button id="addBtn">Добавить</button>
+<button onclick="add()">Добавить</button>
 
 <h2>Товары</h2>
 <div id="list"></div>
@@ -72,10 +81,10 @@ button{
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-import { getStorage, ref, uploadBytes, getDownloadURL }
+import { getStorage, ref, uploadBytesResumable, getDownloadURL }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // Firebase
@@ -90,30 +99,43 @@ const db=getFirestore(app);
 const storage=getStorage(app);
 
 // LOGIN
-loginBtn.onclick=()=>{
+window.login=()=>{
  if(passInput.value==="lock123612"){
-   loginBox.style.display="none";
-   panel.style.display="block";
-   load();
+  loginBox.style.display="none";
+  panel.style.display="block";
+  load();
  } else alert("Неверный пароль");
 };
 
-// 📸 ЗАГРУЗКА ФОТО
+// 📸 ЗАГРУЗКА ФОТО (PRO MAX)
 fileInput.onchange=async(e)=>{
- const file=e.target.files[0];
- if(!file) return;
+ const files=[...e.target.files];
+ let urls=[];
 
- const storageRef=ref(storage,"products/"+Date.now());
- await uploadBytes(storageRef,file);
+ for(const file of files){
+   const storageRef=ref(storage,"products/"+Date.now()+file.name);
+   const task=uploadBytesResumable(storageRef,file);
 
- const url=await getDownloadURL(storageRef);
- image.value=url;
+   await new Promise(res=>{
+     task.on("state_changed",snap=>{
+       const prog=(snap.bytesTransferred/snap.totalBytes)*100;
+       bar.style.width=prog+"%";
+     },
+     console.error,
+     async ()=>{
+       const url=await getDownloadURL(task.snapshot.ref);
+       urls.push(url);
+       res();
+     });
+   });
+ }
 
- alert("Фото загружено!");
+ image.value=urls.join(",");
+ alert("Фото загружены!");
 };
 
 // ➕ ДОБАВЛЕНИЕ
-addBtn.onclick=async()=>{
+window.add=async()=>{
  if(!name.value||!price.value||!image.value){
    alert("Заполни всё");
    return;
@@ -122,20 +144,16 @@ addBtn.onclick=async()=>{
  await addDoc(collection(db,"products"),{
   name:name.value,
   price:price.value,
-  image:image.value,
+  images:image.value.split(","),
   category:category.value
  });
 
  alert("Добавлено!");
-
- name.value="";
- price.value="";
- image.value="";
-
+ name.value="";price.value="";image.value="";
  load();
 };
 
-// 📦 ЗАГРУЗКА СПИСКА
+// 📦 СПИСОК
 async function load(){
  list.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
@@ -148,6 +166,7 @@ async function load(){
   div.innerHTML=`
    ${p.name} — ${p.price}
    <button class="del">Удалить</button>
+   <button class="edit">Изменить цену</button>
   `;
 
   div.querySelector(".del").onclick=async()=>{
@@ -155,11 +174,18 @@ async function load(){
     load();
   };
 
+  div.querySelector(".edit").onclick=async()=>{
+    const np=prompt("Новая цена:",p.price);
+    if(np){
+      await updateDoc(doc(db,"products",d.id),{price:np});
+      load();
+    }
+  };
+
   list.appendChild(div);
  });
 }
 
 </script>
-
 </body>
 </html>
