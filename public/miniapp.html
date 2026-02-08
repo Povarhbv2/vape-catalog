@@ -20,15 +20,11 @@ body{
   text-shadow:0 0 15px #a100ff;
 }
 
-#catalog{
-  padding:15px;
-}
-
 .card{
   background:#141420;
   border-radius:20px;
   padding:15px;
-  margin-bottom:15px;
+  margin:15px;
   border:1px solid #6a00ff;
   box-shadow:0 0 20px #6a00ff55;
 }
@@ -50,6 +46,29 @@ button{
   width:100%;
   font-size:16px;
 }
+
+/* экран товара */
+.modal{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#000;
+  display:none;
+  overflow:auto;
+}
+
+.modal img{
+  width:100%;
+  height:250px;
+  object-fit:cover;
+}
+
+.back{
+  background:#333;
+  margin:10px;
+}
 </style>
 
 <title>VapeStock</title>
@@ -60,56 +79,13 @@ button{
 <h2 class="title">💨 VapeStock</h2>
 <div id="catalog"></div>
 
+<div id="modal" class="modal"></div>
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain: "vapestock-3dc76.firebaseapp.com",
-  projectId: "vapestock-3dc76",
-};
+  a
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-const tg = window.Telegram?.WebApp;
-if(tg) tg.expand();
-
-const catalog = document.getElementById("catalog");
-
-async function load(){
-  const snap = await getDocs(collection(db,"products"));
-  snap.forEach(doc=>{
-    const p = doc.data();
-
-    const div = document.createElement("div");
-    div.className="card";
-
-    div.innerHTML=`
-      <img src="${p.image}">
-      <h3>${p.name}</h3>
-      <p>${p.price}</p>
-      <p>В наличии: ${p.stock}</p>
-      <button onclick='order(${JSON.stringify(p)})'>Заказать</button>
-    `;
-
-    catalog.appendChild(div);
-  });
-}
-
-window.order = function(p){
-  if(tg){
-    tg.sendData(JSON.stringify(p));
-  }else{
-    alert("Заказ отправлен");
-  }
-}
-
-load();
-
-</script>
-
-</body>
-</html>
