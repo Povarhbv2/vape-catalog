@@ -11,7 +11,6 @@ body{
   font-family:sans-serif;
   padding:15px;
 }
-
 input,select,button{
   width:100%;
   padding:12px;
@@ -19,11 +18,16 @@ input,select,button{
   border-radius:10px;
   border:none;
 }
-
 button{
   background:linear-gradient(45deg,#7b00ff,#ff00cc);
   color:white;
   font-size:16px;
+}
+.card{
+  background:#111;
+  padding:10px;
+  margin:8px 0;
+  border-radius:10px;
 }
 </style>
 </head>
@@ -41,14 +45,13 @@ button{
 <input id="name" placeholder="Название"/>
 <input id="price" placeholder="Цена"/>
 <input id="img" placeholder="URL фото"/>
-
 <select id="cat">
 <option value="pod">Pod</option>
 <option value="liquid">Жидкость</option>
 <option value="disposable">Одноразка</option>
 </select>
 
-<button onclick="save()">Сохранить товар</button>
+<button onclick="save()">Сохранить</button>
 
 <hr>
 <h3>Товары</h3>
@@ -80,15 +83,13 @@ window.login=()=>{
   if(pass.value==="lock123612"){
     panel.style.display="block";
     load();
-  } else {
-    alert("Неверный пароль");
-  }
+  } else alert("Неверный пароль");
 };
 
 window.save=async()=>{
   try{
-    if(!name.value || !price.value || !img.value){
-      alert("Заполни ВСЕ поля");
+    if(!name.value.trim() || !price.value.trim() || !img.value.trim()){
+      alert("Заполни ВСЕ поля!");
       return;
     }
 
@@ -104,7 +105,6 @@ window.save=async()=>{
     name.value="";
     price.value="";
     img.value="";
-
     load();
 
   }catch(e){
@@ -120,8 +120,8 @@ window.load=async()=>{
   snap.forEach(d=>{
     const p=d.data();
     list.innerHTML+=`
-      <div style="margin:10px 0;padding:10px;background:#111;border-radius:10px">
-        ${p.name} — ${p.price} ₽
+      <div class="card">
+        ${p.name} — ${p.price}₽
         <button onclick="del('${d.id}')">Удалить</button>
       </div>`;
   });
