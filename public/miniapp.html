@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VapeStock</title>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc,updateDoc }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig={
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
+};
+
+const app=initializeApp(firebaseConfig);
+window.db=getFirestore(app);
+window.fs={collection,addDoc,getDocs,deleteDoc,doc,updateDoc};
+</script>
+
+<style>
+body{margin:0;background:#0b0016;color:white;font-family:sans-serif}
+.header{background:#7a00ff;padding:20px;text-align:center;font-size:24px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:10px}
+.card{background:#1a0033;padding:10px;border-radius:12px}
+.card img{width:100%;border-radius:10px}
+button{width:100%;padding:10px;border:none;border-radius:8px;margin-top:6px;background:#a000ff;color:white}
+input{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none}
+#admin{position:fixed;top:10px;right:10px}
+#panel{display:none;position:fixed;inset:0;background:#000000ee;padding:20px}
+</style>
+</head>
+
+<body>
+
+<div class="header">VapeStock</div>
+<button id="admin">⚙️</button>
+
+<div class="grid" id="list"></div>
+
+<div id="panel">
+<h2>Админ</h2>
+<input id="n" placeholder="Название">
+<input id="p" placeholder="Цена">
+<input id="i" placeholder="URL фото">
+<button onclick="save()">Сохранить</button>
+<button onclick="closeP()">Закрыть</button>
+</div>
+
+<script>
+const PASS="lock123612";
+let edit=null;
+
+admin.onclick=()=>{
+ if(prompt("Пароль")==PASS) panel.style.display="block";
+}
+
+function closeP(){
+ panel.style.display="none";
+ edit=null;
+}
+
+async function save(){
+ const name=n.value.trim();
+ const price=Number(p.value);
+ const image=i.value.trim();
+
+ if(!name||!price||!image){
+  alert("Заполни всё");
+  return;
+ }
+
+ if(edit){
+  await fs.updateDoc(fs.doc(db,"products",edit),{name,price,image});
+  edit=null;
+ }else{
+  await fs.addDoc(fs.collection(db,"products"),{name,price,image});
+ }
+
+ n.value="";p.value="";i.value="";
+ load();
+}
+
+async function load(){
+ list.innerHTML="";
+ const s=await fs.getDocs(fs.collection(db,"products"));
+
+ s.forEach(d=>{
+  const x=d.data();
+  list.innerHTML+=`
+   <div class="card">
+    <img src="${x.image}">
+    <h3>${x.name}</h3>
+    <b>${x.price} ₽</b>
+    <button onclick="editP('${d.id}','${x.name}','${x.price}','${x.image}')">Редактировать</button>
+    <button onclick="del('${d.id}')">Удалить</button>
+   </div>`;
+ });
+}
+
+function editP(id,name,price,image){
+ edit=id;
+ panel.style.display="block";
+ n.value=name;
+ p.value=price;
+ i.value=image;
+}
+
+async function del(id){
+ if(confirm("Удалить?")){
+  await fs.deleteDoc(fs.doc(db,"products",id));
+  load();
+ }
+}
+
+load();
+</script>
+
+</body>
+</html>
