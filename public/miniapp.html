@@ -6,25 +6,59 @@
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-<title>VapeStock</title>
+<title>VapeStock PRO</title>
 
 <style>
 body{
     margin:0;
     font-family:Arial;
-    background:#0b0b15;
+    background:#07070f;
     color:white;
 }
 
 header{
     padding:15px;
     text-align:center;
-    font-size:24px;
+    font-size:26px;
     background:linear-gradient(45deg,#6a00ff,#c300ff);
+    box-shadow:0 0 20px #a000ff;
+}
+
+.category-bar{
+    display:flex;
+    gap:10px;
+    padding:10px;
+    overflow:auto;
+}
+
+.cat-btn{
+    background:#1a1a2e;
+    border:1px solid #6a00ff;
+    color:white;
+    padding:8px 12px;
+    border-radius:20px;
+    cursor:pointer;
+}
+
+.catalog{
+    padding:15px;
+}
+
+.card{
+    background:#111122;
+    padding:15px;
+    margin-bottom:15px;
+    border-radius:12px;
+    box-shadow:0 0 15px #6a00ff55;
+}
+
+.card img{
+    width:100%;
+    border-radius:10px;
 }
 
 button{
-    background:#a000ff;
+    background:linear-gradient(45deg,#a000ff,#d000ff);
     border:none;
     padding:10px;
     color:white;
@@ -33,32 +67,15 @@ button{
     margin-top:5px;
 }
 
-.catalog{
-    padding:15px;
-}
-
-.card{
-    background:#151525;
-    padding:15px;
-    margin-bottom:15px;
-    border-radius:12px;
-    box-shadow:0 0 10px #6a00ff88;
-}
-
-.card img{
-    width:100%;
-    border-radius:10px;
-}
-
 .admin{
     display:none;
     padding:15px;
-    background:#111;
+    background:#0f0f1a;
 }
 
-input{
+input,select{
     width:100%;
-    padding:8px;
+    padding:10px;
     margin:5px 0;
     border-radius:6px;
     border:none;
@@ -69,10 +86,12 @@ input{
 <body>
 
 <header>
-VapeStock
+VapeStock PRO
 <br>
-<button onclick="toggleAdmin()">Админка</button>
+<button onclick="adminLogin()">Админка</button>
 </header>
+
+<div class="category-bar" id="cats"></div>
 
 <div class="catalog" id="catalog"></div>
 
@@ -83,23 +102,27 @@ VapeStock
 <input id="price" placeholder="Цена">
 <input id="image" placeholder="URL картинки">
 
+<select id="category">
+<option value="pod">Pod</option>
+<option value="liquid">Жидкости</option>
+<option value="disposable">Одноразки</option>
+<option value="coil">Испарители</option>
+</select>
+
 <button onclick="addProduct()">Добавить</button>
 
 <hr>
-
 <h3>Удаление</h3>
 <div id="adminList"></div>
 </div>
 
 <script type="module">
 
-// Telegram
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } 
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -114,65 +137,52 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const catalog = document.getElementById("catalog");
-const adminList = document.getElementById("adminList");
+const catalog=document.getElementById("catalog");
+const adminList=document.getElementById("adminList");
+const catsDiv=document.getElementById("cats");
+
+let currentCat="all";
+
+const categories=["all","pod","liquid","disposable","coil"];
+
+categories.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="cat-btn";
+    b.innerText=c;
+    b.onclick=()=>{currentCat=c;loadProducts();}
+    catsDiv.appendChild(b);
+});
 
 async function loadProducts(){
     catalog.innerHTML="";
     adminList.innerHTML="";
 
-    const querySnapshot = await getDocs(collection(db,"products"));
+    const snap=await getDocs(collection(db,"products"));
 
-    querySnapshot.forEach((docSnap)=>{
-        const p = docSnap.data();
-        const id = docSnap.id;
+    snap.forEach(d=>{
+        const p=d.data();
+        const id=d.id;
 
-        // витрина
+        if(currentCat!="all" && p.category!=currentCat) return;
+
         const div=document.createElement("div");
         div.className="card";
         div.innerHTML=`
             <img src="${p.image}">
             <h3>${p.name}</h3>
             <p>${p.price}</p>
+            <small>${p.category}</small>
         `;
         catalog.appendChild(div);
 
-        // админ
         const ad=document.createElement("div");
         ad.innerHTML=`
-            ${p.name} — ${p.price}
+            ${p.name}
             <button onclick="remove('${id}')">Удалить</button>
         `;
         adminList.appendChild(ad);
     });
 }
 
-window.addProduct = async function(){
-    const name=document.getElementById("name").value;
-    const price=document.getElementById("price").value;
-    const image=document.getElementById("image").value;
-
-    if(!name||!price||!image) return alert("Заполни всё");
-
-    await addDoc(collection(db,"products"),{
-        name,price,image
-    });
-
-    loadProducts();
-}
-
-window.remove = async function(id){
-    await deleteDoc(doc(db,"products",id));
-    loadProducts();
-}
-
-window.toggleAdmin = function(){
-    const a=document.getElementById("admin");
-    a.style.display = a.style.display=="block" ? "none" : "block";
-}
-
-loadProducts();
-
-</script>
-</body>
-</html>
+window.addProduct=async function(){
+    const name=nameI
