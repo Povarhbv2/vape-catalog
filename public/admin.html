@@ -2,189 +2,105 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <style>
-body{
- font-family:Arial;
- background:#050010;
- color:white;
- padding:20px;
-}
-
-input,select,button{
- width:100%;
- padding:12px;
- margin:8px 0;
- border-radius:10px;
- border:none;
-}
-
+body{background:#050010;color:white;font-family:Arial;padding:20px}
+input,button,select{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:none}
 button{background:#a000ff;color:white}
-.del{background:red}
-
-.card{
- background:#140022;
- padding:10px;
- margin:10px 0;
- border-radius:12px;
-}
-
-.progress{
- height:8px;
- background:#333;
- border-radius:10px;
- overflow:hidden;
-}
-.bar{
- height:100%;
- width:0%;
- background:#a000ff;
-}
+.progress{height:6px;background:#333;border-radius:10px}
+.bar{height:100%;width:0;background:#a000ff}
 </style>
 </head>
 
 <body>
 
-<div id="loginBox">
-<h2>Вход</h2>
-<input id="passInput" placeholder="Пароль">
+<h2>Админ вход</h2>
+<input id="pass" placeholder="Пароль">
 <button onclick="login()">Войти</button>
-</div>
 
 <div id="panel" style="display:none">
 
-<h2>Добавить товар</h2>
+<h3>Добавить товар</h3>
 
 <input id="name" placeholder="Название">
 <input id="price" placeholder="Цена">
 
-<input type="file" id="fileInput" accept="image/*" multiple>
+<input type="file" id="file" accept="image/*">
 
-<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="progress"><div id="bar" class="bar"></div></div>
 
-<input id="image" placeholder="Ссылки появятся тут">
+<input id="image" placeholder="URL фото появится тут">
 
 <select id="category">
 <option value="pod">Pod</option>
 <option value="liquid">Жидкость</option>
 <option value="disposable">Одноразка</option>
-<option value="coil">Испаритель</option>
 </select>
 
-<button onclick="add()">Добавить</button>
-
-<h2>Товары</h2>
-<div id="list"></div>
+<button onclick="add()">Добавить товар</button>
 
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc }
+import { getFirestore, collection, addDoc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 import { getStorage, ref, uploadBytesResumable, getDownloadURL }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
-// Firebase
 const app=initializeApp({
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
  authDomain:"vapestock-3dc76.firebaseapp.com",
  projectId:"vapestock-3dc76",
- storageBucket:"vapestock-3dc76.appspot.com"
+ storageBucket:"vapestock-3dc76.firebasestorage.app"
 });
 
 const db=getFirestore(app);
 const storage=getStorage(app);
 
-// LOGIN
 window.login=()=>{
- if(passInput.value==="lock123612"){
-  loginBox.style.display="none";
-  panel.style.display="block";
-  load();
- } else alert("Неверный пароль");
+ if(pass.value==="lock123612"){
+   panel.style.display="block";
+ }
 };
 
-// 📸 ЗАГРУЗКА ФОТО (PRO MAX)
-fileInput.onchange=async(e)=>{
- const files=[...e.target.files];
- let urls=[];
+// 📸 ЗАГРУЗКА ФОТО
+file.onchange=()=>{
+ const f=file.files[0];
+ if(!f) return;
 
- for(const file of files){
-   const storageRef=ref(storage,"products/"+Date.now()+file.name);
-   const task=uploadBytesResumable(storageRef,file);
+ const r=ref(storage,"products/"+Date.now()+"_"+f.name);
+ const task=uploadBytesResumable(r,f);
 
-   await new Promise(res=>{
-     task.on("state_changed",snap=>{
-       const prog=(snap.bytesTransferred/snap.totalBytes)*100;
-       bar.style.width=prog+"%";
-     },
-     console.error,
-     async ()=>{
-       const url=await getDownloadURL(task.snapshot.ref);
-       urls.push(url);
-       res();
-     });
-   });
- }
-
- image.value=urls.join(",");
- alert("Фото загружены!");
+ task.on("state_changed",s=>{
+   bar.style.width=(s.bytesTransferred/s.totalBytes*100)+"%";
+ },
+ console.error,
+ async()=>{
+   const url=await getDownloadURL(task.snapshot.ref);
+   image.value=url;
+   alert("Фото загружено!");
+ });
 };
 
 // ➕ ДОБАВЛЕНИЕ
 window.add=async()=>{
  if(!name.value||!price.value||!image.value){
-   alert("Заполни всё");
+   alert("Заполни всё!");
    return;
  }
 
  await addDoc(collection(db,"products"),{
   name:name.value,
   price:price.value,
-  images:image.value.split(","),
-  category:category.value
+  image:image.value,
+  category:category.value,
+  views:0
  });
 
- alert("Добавлено!");
- name.value="";price.value="";image.value="";
- load();
+ alert("Товар добавлен!");
 };
-
-// 📦 СПИСОК
-async function load(){
- list.innerHTML="";
- const snap=await getDocs(collection(db,"products"));
-
- snap.forEach(d=>{
-  const p=d.data();
-
-  const div=document.createElement("div");
-  div.className="card";
-  div.innerHTML=`
-   ${p.name} — ${p.price}
-   <button class="del">Удалить</button>
-   <button class="edit">Изменить цену</button>
-  `;
-
-  div.querySelector(".del").onclick=async()=>{
-    await deleteDoc(doc(db,"products",d.id));
-    load();
-  };
-
-  div.querySelector(".edit").onclick=async()=>{
-    const np=prompt("Новая цена:",p.price);
-    if(np){
-      await updateDoc(doc(db,"products",d.id),{price:np});
-      load();
-    }
-  };
-
-  list.appendChild(div);
- });
-}
 
 </script>
 </body>
