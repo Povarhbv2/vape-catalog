@@ -9,12 +9,12 @@
 <style>
 body{
   margin:0;
-  background:#0a0a12;
   font-family:Arial;
+  background:#0b0b15;
   color:white;
 }
 
-.title{
+h2{
   text-align:center;
   color:#c86bff;
 }
@@ -22,52 +22,65 @@ body{
 .grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px;
+  gap:12px;
   padding:10px;
 }
 
 .card{
-  background:#141420;
-  padding:10px;
+  background:#141426;
+  border:1px solid #7b2cff;
   border-radius:12px;
+  padding:10px;
 }
 
 .card img{
   width:100%;
   height:120px;
   object-fit:cover;
-  border-radius:10px;
+  border-radius:8px;
 }
 
 button{
   background:#a100ff;
-  color:white;
   border:none;
+  color:white;
   padding:10px;
   width:100%;
   border-radius:10px;
-  margin-top:5px;
+  margin-top:6px;
+}
+
+.cartBtn{
+  position:fixed;
+  bottom:10px;
+  left:10px;
+  right:10px;
 }
 
 .modal{
   position:fixed;
   inset:0;
   background:#000;
-  display:none;
   padding:15px;
+  display:none;
+}
+input{
+  width:100%;
+  padding:10px;
+  margin:5px 0;
+  border-radius:8px;
+  border:none;
 }
 </style>
-
-<title>VapeStock</title>
 </head>
 
 <body>
 
-<h2 class="title">💨 VapeStock</h2>
+<h2>💨 VapeStock</h2>
 
 <div id="products" class="grid"></div>
 
-<button onclick="openCart()">🛒 Корзина</button>
+<button class="cartBtn" onclick="openCart()">🛒 Корзина</button>
 
 <div id="modal" class="modal"></div>
 
@@ -85,26 +98,28 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-const tg=window.Telegram.WebApp;
-tg.expand();
+const tg = window.Telegram?.WebApp;
+if(tg){
+  tg.expand();
+  tg.ready();
+}
 
 let CART=[];
 const prodDiv=document.getElementById("products");
 const modal=document.getElementById("modal");
 
 async function load(){
- prodDiv.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
 
- snap.forEach(d=>{
-   const p=d.data();
+ snap.forEach(doc=>{
+   const p=doc.data();
 
    const div=document.createElement("div");
    div.className="card";
 
    div.innerHTML=`
      <img src="${p.image}">
-     <h4>${p.name}</h4>
+     <b>${p.name}</b>
      <p>${p.price}</p>
      <button onclick='add(${JSON.stringify(p)})'>В корзину</button>
    `;
@@ -115,13 +130,13 @@ async function load(){
 
 window.add=p=>{
  CART.push(p);
- alert("Добавлено в корзину");
+ alert("Добавлено!");
 }
 
 window.openCart=()=>{
  modal.style.display="block";
 
- let html="<h2>Корзина</h2>";
+ let html="<h3>Корзина</h3>";
  let sum=0;
 
  CART.forEach(p=>{
@@ -130,19 +145,31 @@ window.openCart=()=>{
  });
 
  html+=`
+ <p>Сумма: ${sum} ₽</p>
+
  <input id="fio" placeholder="ФИО">
  <input id="phone" placeholder="Телефон">
- <button onclick="checkout()">Заказать</button>
+
+ <button onclick="checkout()">Оформить заказ</button>
+ <button onclick="modal.style.display='none'">Закрыть</button>
  `;
 
  modal.innerHTML=html;
 }
 
 window.checkout=()=>{
+ if(!tg){
+   alert("Открой через Telegram!");
+   return;
+ }
+
  if(CART.length===0){
    alert("Корзина пуста");
    return;
  }
+
+ const fio=document.getElementById("fio").value||"Не указано";
+ const phone=document.getElementById("phone").value||"Не указан";
 
  let items="";
  let sum=0;
@@ -152,12 +179,18 @@ window.checkout=()=>{
    sum+=Number(p.price.replace(/\D/g,''));
  });
 
- tg.sendData(JSON.stringify({
-   buyerMsg:`Заказ на ${sum} ₽ принят!`,
-   sellerMsg:`Новый заказ:\n${items}\nСумма: ${sum} ₽`
- }));
+ const data={
+   buyerMsg:`✅ Заказ принят!\nСумма: ${sum} ₽`,
+   sellerMsg:`🔥 Новый заказ!\nПокупатель: ${fio}\nТелефон: ${phone}\n\n${items}\nСумма: ${sum} ₽`
+ };
 
- tg.close();
+ console.log("SEND:",data);
+
+ tg.sendData(JSON.stringify(data));
+
+ setTimeout(()=>{
+   tg.close();
+ },500);
 }
 
 load();
