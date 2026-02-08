@@ -3,18 +3,37 @@
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-body{background:#050010;color:white;font-family:Arial;padding:20px}
-input,button,select{width:100%;padding:12px;margin:8px 0;border-radius:10px;border:none}
-button{background:#a000ff;color:white}
-.progress{height:6px;background:#333;border-radius:10px}
-.bar{height:100%;width:0;background:#a000ff}
+body{
+ background:#070010;
+ color:white;
+ font-family:Arial;
+ padding:20px
+}
+input,button,select{
+ width:100%;
+ padding:14px;
+ margin:8px 0;
+ border-radius:12px;
+ border:none;
+ font-size:16px;
+}
+button{
+ background:linear-gradient(45deg,#7a00ff,#d000ff);
+ color:white;
+}
+.preview{
+ width:100%;
+ border-radius:14px;
+ margin-top:10px;
+ display:none;
+}
 </style>
 </head>
 
 <body>
 
 <h2>Админ вход</h2>
-<input id="pass">
+<input id="pass" placeholder="Пароль">
 <button onclick="login()">Войти</button>
 
 <div id="panel" style="display:none">
@@ -26,12 +45,12 @@ button{background:#a000ff;color:white}
 
 <input type="file" id="file" accept="image/*">
 
-<div class="progress"><div id="bar" class="bar"></div></div>
+<img id="preview" class="preview">
 
-<input id="image" placeholder="URL появится тут">
+<input id="image" placeholder="URL фото">
 
 <select id="category">
-<option value="pod">Pod</option>
+<option value="pod">Pod-система</option>
 <option value="liquid">Жидкость</option>
 <option value="disposable">Одноразка</option>
 </select>
@@ -42,26 +61,27 @@ button{background:#a000ff;color:white}
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
 import { getFirestore, collection, addDoc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import { getStorage, ref, uploadBytes, getDownloadURL }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const app=initializeApp({
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
  authDomain:"vapestock-3dc76.firebaseapp.com",
- projectId:"vapestock-3dc76",
- storageBucket:"vapestock-3dc76.appspot.com" // ← ВАЖНО!
+ projectId:"vapestock-3dc76"
 });
 
 const db=getFirestore(app);
-const storage=getStorage(app);
+
+const CLOUD_NAME="dhmrlczr8";
 
 window.login=()=>{
  if(pass.value==="lock123612"){
-   panel.style.display="block";
+  panel.style.display="block";
+ }else{
+  alert("Неверный пароль");
  }
 };
 
@@ -69,27 +89,36 @@ file.onchange=async()=>{
  const f=file.files[0];
  if(!f) return;
 
- const r=ref(storage,"products/"+Date.now()+"_"+f.name);
+ const form=new FormData();
+ form.append("file",f);
+ form.append("upload_preset","unsigned_preset");
 
- await uploadBytes(r,f);
+ const res=await fetch(
+  `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+  {method:"POST",body:form}
+ );
 
- const url=await getDownloadURL(r);
- image.value=url;
+ const data=await res.json();
+
+ image.value=data.secure_url;
+ preview.src=data.secure_url;
+ preview.style.display="block";
 
  alert("Фото загружено!");
 };
 
 window.add=async()=>{
  if(!name.value||!price.value||!image.value){
-   alert("Заполни всё!");
-   return;
+  alert("Заполни всё!");
+  return;
  }
 
  await addDoc(collection(db,"products"),{
   name:name.value,
   price:price.value,
   image:image.value,
-  category:category.value
+  category:category.value,
+  views:0
  });
 
  alert("Товар добавлен!");
