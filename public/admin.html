@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>VapeStock Admin</title>
+<title>Admin MEGA FIX</title>
 
 <style>
 body{
-  font-family:sans-serif;
   background:#0a0014;
   color:white;
+  font-family:sans-serif;
   padding:20px;
 }
 
@@ -24,6 +24,10 @@ input,select,button{
 button{
   background:linear-gradient(45deg,#8f00ff,#d000ff);
   color:white;
+}
+
+button:disabled{
+  opacity:0.5;
 }
 
 .card{
@@ -42,13 +46,13 @@ img{
 
 <body>
 
-<h2>Админ вход</h2>
-<input id="pass" placeholder="Пароль">
+<h2>Вход</h2>
+<input id="pass">
 <button onclick="login()">Войти</button>
 
 <div id="panel" style="display:none">
 
-<h2>Добавить товар</h2>
+<h2>Товар</h2>
 
 <input id="name" placeholder="Название">
 <input id="price" placeholder="Цена">
@@ -56,7 +60,7 @@ img{
 <select id="cat">
 <option>Pod</option>
 <option>Одноразка</option>
-<option>Жидкости</option>
+<option>Жидкость</option>
 </select>
 
 <input type="file" id="file">
@@ -64,121 +68,134 @@ img{
 
 <img id="preview">
 
-<button onclick="saveProduct()">Сохранить</button>
+<button id="saveBtn" onclick="saveProduct()" disabled>
+Сохранить
+</button>
 
-<h2>Товары</h2>
+<h2>Список</h2>
 <div id="list"></div>
 
 </div>
 
 <script type="module">
 
-/* ---------- FIREBASE ---------- */
+/* FIREBASE */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc,updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig={
-  apiKey:"YOUR_KEY",
-  authDomain:"YOUR_DOMAIN",
-  projectId:"vapestock-3dc76"
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
 };
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-/* ---------- CLOUDINARY ---------- */
+/* CLOUDINARY */
 const CLOUD="dhmrlczr8";
-const PRESET="vapestock"; // имя unsigned preset
+const PRESET="vapestock"; // unsigned preset
 
 let imageURL="";
 let editId=null;
 
-/* ---------- LOGIN ---------- */
+/* LOGIN */
 window.login=()=>{
- if(document.getElementById("pass").value==="lock123612"){
-   panel.style.display="block";
-   load();
+ if(pass.value==="lock123612"){
+  panel.style.display="block";
+  load();
  }
-}
+};
 
-/* ---------- UPLOAD ---------- */
+/* UPLOAD */
 window.uploadPhoto=async()=>{
- const file=fileInput.files[0];
- if(!file){alert("Выбери фото");return;}
+ const f=file.files[0];
+ if(!f){alert("Выбери фото");return;}
 
  const fd=new FormData();
- fd.append("file",file);
+ fd.append("file",f);
  fd.append("upload_preset",PRESET);
 
- const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`,{
-   method:"POST",
-   body:fd
- });
+ const r=await fetch(
+  `https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`,
+  {method:"POST",body:fd}
+ );
 
  const d=await r.json();
 
- imageURL=d.secure_url;
- preview.src=imageURL;
- alert("Фото загружено!");
-}
+ if(!d.secure_url){
+  alert("Ошибка загрузки!");
+  return;
+ }
 
-/* ---------- SAVE ---------- */
+ imageURL=String(d.secure_url);
+ preview.src=imageURL;
+
+ saveBtn.disabled=false;
+
+ console.log("Фото OK:",imageURL);
+};
+
+/* SAVE */
 window.saveProduct=async()=>{
+
  const nameVal=name.value.trim();
  const priceVal=price.value.trim();
- const catVal=cat.value;
+ const catVal=cat.value||"Pod";
 
- if(!nameVal||!priceVal||!imageURL){
-   alert("Заполни всё + фото");
-   return;
- }
+ if(!nameVal)return alert("Название пустое");
+ if(!priceVal)return alert("Цена пустая");
+ if(!imageURL)return alert("Фото не загружено");
 
  const data={
-   name:nameVal,
-   price:priceVal,
-   category:catVal,
-   image:imageURL,
-   views:0
+  name:String(nameVal),
+  price:String(priceVal),
+  category:String(catVal),
+  image:String(imageURL),
+  views:0
  };
 
+ console.log("Отправляем:",data);
+
  if(editId){
-   await updateDoc(doc(db,"products",editId),data);
-   editId=null;
+  await updateDoc(doc(db,"products",editId),data);
+  editId=null;
  }else{
-   await addDoc(collection(db,"products"),data);
+  await addDoc(collection(db,"products"),data);
  }
+
+ alert("Сохранено!");
 
  name.value="";
  price.value="";
  preview.src="";
  imageURL="";
+ saveBtn.disabled=true;
 
  load();
- alert("Сохранено!");
-}
+};
 
-/* ---------- LOAD ---------- */
+/* LOAD */
 async function load(){
  list.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
 
  snap.forEach(d=>{
-   const p=d.data();
+  const p=d.data();
 
-   list.innerHTML+=`
-   <div class="card">
-     <img src="${p.image}">
-     <b>${p.name}</b><br>
-     ${p.price} ₽<br>
-     ${p.category}<br>
-
-     <button onclick="edit('${d.id}','${p.name}','${p.price}','${p.category}','${p.image}')">Редактировать</button>
-     <button onclick="del('${d.id}')">Удалить</button>
-   </div>`;
+  list.innerHTML+=`
+  <div class="card">
+   <img src="${p.image}">
+   <b>${p.name}</b><br>
+   ${p.price}₽<br>
+   ${p.category}<br>
+   <button onclick="edit('${d.id}','${p.name}','${p.price}','${p.category}','${p.image}')">Редактировать</button>
+   <button onclick="del('${d.id}')">Удалить</button>
+  </div>`;
  });
 }
 
-/* ---------- EDIT ---------- */
+/* EDIT */
 window.edit=(id,n,p,c,i)=>{
  editId=id;
  name.value=n;
@@ -186,13 +203,14 @@ window.edit=(id,n,p,c,i)=>{
  cat.value=c;
  preview.src=i;
  imageURL=i;
-}
+ saveBtn.disabled=false;
+};
 
-/* ---------- DELETE ---------- */
+/* DELETE */
 window.del=async(id)=>{
  await deleteDoc(doc(db,"products",id));
  load();
-}
+};
 
 </script>
 </body>
