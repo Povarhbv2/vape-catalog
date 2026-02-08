@@ -2,21 +2,62 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VapeStock</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 body{
- background:#0a0014;
+ background:#0b0018;
  color:white;
  font-family:sans-serif;
  margin:0;
 }
 
-h1{
+.header{
  text-align:center;
- padding:15px;
- background:linear-gradient(45deg,#6a00ff,#c400ff);
- margin:0;
+ padding:14px;
+ font-size:22px;
+ font-weight:bold;
+ background:linear-gradient(45deg,#6a00ff,#d000ff);
+}
+
+.user{
+ font-size:14px;
+ opacity:.9;
+}
+
+.topbar{
+ display:flex;
+ gap:8px;
+ padding:10px;
+}
+
+input,select{
+ flex:1;
+ padding:10px;
+ border-radius:10px;
+ border:none;
+}
+
+.categories{
+ display:flex;
+ gap:8px;
+ overflow:auto;
+ padding:8px;
+}
+
+.cat{
+ padding:7px 14px;
+ border-radius:20px;
+ background:#1c0033;
+ cursor:pointer;
+ white-space:nowrap;
+}
+
+.active{
+ background:#b100ff;
 }
 
 .grid{
@@ -27,9 +68,10 @@ h1{
 }
 
 .card{
- background:#140028;
- padding:10px;
+ background:#150028;
  border-radius:14px;
+ padding:10px;
+ position:relative;
 }
 
 .card img{
@@ -38,22 +80,49 @@ h1{
 }
 
 .price{
- color:#c77dff;
+ color:#d28cff;
  font-weight:bold;
+}
+
+.fav{
+ position:absolute;
+ right:10px;
+ top:10px;
+ font-size:20px;
+ cursor:pointer;
+}
+
+.views{
+ font-size:12px;
+ opacity:.7;
 }
 </style>
 </head>
 
 <body>
 
-<h1>VapeStock</h1>
+<div class="header">
+ VapeStock
+ <div class="user" id="user"></div>
+</div>
 
+<div class="topbar">
+ <input id="search" placeholder="Поиск...">
+ <select id="sort">
+  <option value="">Сортировка</option>
+  <option value="low">Цена ↑</option>
+  <option value="high">Цена ↓</option>
+  <option value="fav">Избранное</option>
+ </select>
+</div>
+
+<div class="categories" id="cats"></div>
 <div class="grid" id="grid"></div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore,collection,getDocs,doc,updateDoc,increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
@@ -65,21 +134,107 @@ const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
 const grid=document.getElementById("grid");
+const catsDiv=document.getElementById("cats");
+const search=document.getElementById("search");
+const sort=document.getElementById("sort");
+
+let products=[];
+let favs=JSON.parse(localStorage.getItem("favs")||"[]");
+let currentCat="Все";
+
+const tg=window.Telegram.WebApp;
+tg.expand();
+
+if(tg.initDataUnsafe?.user){
+ document.getElementById("user").innerText=
+ "@" + (tg.initDataUnsafe.user.username||tg.initDataUnsafe.user.first_name);
+}
 
 async function load(){
  const snap=await getDocs(collection(db,"products"));
+ products=[];
+ let categories=["Все"];
+
  snap.forEach(d=>{
-  const p=d.data();
+  let p=d.data();
+  p.id=d.id;
+  products.push(p);
+  if(!categories.includes(p.category)) categories.push(p.category);
+ });
+
+ drawCats(categories);
+ show();
+}
+
+function drawCats(arr){
+ catsDiv.innerHTML="";
+ arr.forEach(c=>{
+  catsDiv.innerHTML+=`<div class="cat" onclick="setCat('${c}',this)">${c}</div>`;
+ });
+}
+
+window.setCat=function(c,el){
+ currentCat=c;
+ document.querySelectorAll(".cat").forEach(e=>e.classList.remove("active"));
+ el.classList.add("active");
+ show();
+}
+
+function show(){
+ let list=[...products];
+
+ if(currentCat!="Все")
+  list=list.filter(p=>p.category==currentCat);
+
+ let q=search.value.toLowerCase();
+ if(q)
+  list=list.filter(p=>p.name.toLowerCase().includes(q));
+
+ if(sort.value=="low")
+  list.sort((a,b)=>a.price-b.price);
+
+ if(sort.value=="high")
+  list.sort((a,b)=>b.price-a.price);
+
+ if(sort.value=="fav")
+  list=list.filter(p=>favs.includes(p.id));
+
+ grid.innerHTML="";
+
+ list.forEach(p=>{
+  let heart=favs.includes(p.id)?"❤️":"🤍";
+
   grid.innerHTML+=`
-   <div class="card">
+  <div class="card" onclick="view('${p.id}')">
+    <div class="fav" onclick="fav(event,'${p.id}')">${heart}</div>
     <img src="${p.image}">
     <h3>${p.name}</h3>
     <div class="price">${p.price} ₽</div>
-    <div>${p.category}</div>
-   </div>
-  `;
+    <div class="views">👁 ${p.views||0}</div>
+  </div>`;
  });
 }
+
+window.fav=function(e,id){
+ e.stopPropagation();
+ if(favs.includes(id))
+  favs=favs.filter(f=>f!=id);
+ else
+  favs.push(id);
+
+ localStorage.setItem("favs",JSON.stringify(favs));
+ show();
+}
+
+window.view=async function(id){
+ await updateDoc(doc(db,"products",id),{
+  views:increment(1)
+ });
+ load();
+}
+
+search.oninput=show;
+sort.onchange=show;
 
 load();
 
