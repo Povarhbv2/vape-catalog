@@ -1,83 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta charset="UTF-8">
 <title>VapeStock</title>
 
 <style>
 body{
-  margin:0;
-  background:#0b0618;
-  font-family:sans-serif;
-  color:white;
+ background:#0a0014;
+ color:white;
+ font-family:sans-serif;
+ margin:0;
 }
 
-.header{
-  padding:20px;
-  text-align:center;
-  font-size:26px;
-  background:linear-gradient(45deg,#7b00ff,#ff00cc);
+h1{
+ text-align:center;
+ padding:15px;
+ background:linear-gradient(45deg,#6a00ff,#c400ff);
+ margin:0;
 }
 
-.products{
-  padding:10px;
+.grid{
+ display:grid;
+ grid-template-columns:repeat(2,1fr);
+ gap:12px;
+ padding:12px;
 }
 
 .card{
-  background:#111;
-  padding:12px;
-  border-radius:14px;
-  margin:10px 0;
-  text-align:center;
+ background:#140028;
+ padding:10px;
+ border-radius:14px;
 }
 
 .card img{
-  width:100%;
-  border-radius:10px;
+ width:100%;
+ border-radius:12px;
 }
 
 .price{
-  color:#c77dff;
-  font-size:18px;
+ color:#c77dff;
+ font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">VapeStock</div>
+<h1>VapeStock</h1>
 
-<div class="products" id="products"></div>
+<div class="grid" id="grid"></div>
 
 <script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig={
-  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain:"vapestock-3dc76.firebaseapp.com",
-  projectId:"vapestock-3dc76"
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
 };
 
 const app=initializeApp(firebaseConfig);
 const db=getFirestore(app);
 
-const snap=await getDocs(collection(db,"products"));
+const grid=document.getElementById("grid");
 
-snap.forEach(d=>{
+async function load(){
+ const snap=await getDocs(collection(db,"products"));
+ snap.forEach(d=>{
   const p=d.data();
-  products.innerHTML+=`
-    <div class="card">
-      <img src="${p.image}">
-      <h3>${p.name}</h3>
-      <div class="price">${p.price} ₽</div>
-    </div>`;
-});
-</script>
+  grid.innerHTML+=`
+   <div class="card">
+    <img src="${p.image}">
+    <h3>${p.name}</h3>
+    <div class="price">${p.price} ₽</div>
+    <div>${p.category}</div>
+   </div>
+  `;
+ });
+}
 
+load();
+
+</script>
 </body>
 </html>
