@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+body{
+ font-family:Arial;
+ background:#050010;
+ color:white;
+ padding:20px;
+}
+
+input,select,button{
+ width:100%;padding:12px;
+ margin:8px 0;
+ border-radius:10px;
+ border:none;
+}
+
+button{
+ background:#a000ff;color:white;
+}
+
+.card{
+ background:#140022;
+ padding:10px;
+ margin:10px 0;
+ border-radius:12px;
+}
+.del{background:red}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+<h2>Вход в админку</h2>
+<input id="pass" placeholder="Пароль">
+<button onclick="login()">Войти</button>
+</div>
+
+<div id="panel" style="display:none">
+
+<h2>Добавить товар</h2>
+
+<input id="name" placeholder="Название">
+<input id="price" placeholder="Цена">
+<input id="image" placeholder="URL картинки">
+
+<select id="category">
+<option value="pod">Pod</option>
+<option value="liquid">Жидкость</option>
+<option value="disposable">Одноразка</option>
+<option value="coil">Испаритель</option>
+</select>
+
+<button onclick="add()">Добавить</button>
+
+<h2>Все товары</h2>
+<div id="list"></div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app=initializeApp({
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
+});
+const db=getFirestore(app);
+
+window.login=()=>{
+ if(pass.value==="lock123612"){
+  login.style.display="none";
+  panel.style.display="block";
+  load();
+ } else alert("Неверный пароль");
+}
+
+window.add=async()=>{
+ await addDoc(collection(db,"products"),{
+  name:name.value,
+  price:price.value,
+  image:image.value,
+  category:category.value
+ });
+ alert("Добавлено!");
+ load();
+}
+
+async function load(){
+ list.innerHTML="";
+ const snap=await getDocs(collection(db,"products"));
+
+ snap.forEach(d=>{
+  const p=d.data();
+  list.innerHTML+=`
+   <div class="card">
+    ${p.name} — ${p.price}
+    <button class="del" onclick="del('${d.id}')">Удалить</button>
+   </div>
+  `;
+ });
+}
+
+window.del=async(id)=>{
+ await deleteDoc(doc(db,"products",id));
+ load();
+}
+
+</script>
+</body>
+</html>
