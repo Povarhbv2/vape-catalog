@@ -12,14 +12,17 @@ body{
 }
 
 input,select,button{
- width:100%;padding:12px;
+ width:100%;
+ padding:12px;
  margin:8px 0;
  border-radius:10px;
  border:none;
 }
 
 button{
- background:#a000ff;color:white;
+ background:#a000ff;
+ color:white;
+ cursor:pointer;
 }
 
 .card{
@@ -28,18 +31,23 @@ button{
  margin:10px 0;
  border-radius:12px;
 }
-.del{background:red}
+
+.del{
+ background:red;
+}
 </style>
 </head>
 
 <body>
 
-<div id="login">
+<!-- LOGIN -->
+<div id="loginBox">
 <h2>Вход в админку</h2>
-<input id="pass" placeholder="Пароль">
-<button onclick="login()">Войти</button>
+<input id="passInput" placeholder="Пароль">
+<button id="loginBtn">Войти</button>
 </div>
 
+<!-- PANEL -->
 <div id="panel" style="display:none">
 
 <h2>Добавить товар</h2>
@@ -55,7 +63,7 @@ button{
 <option value="coil">Испаритель</option>
 </select>
 
-<button onclick="add()">Добавить</button>
+<button id="addBtn">Добавить</button>
 
 <h2>Все товары</h2>
 <div id="list"></div>
@@ -68,6 +76,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Firebase
 const app=initializeApp({
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
  authDomain:"vapestock-3dc76.firebaseapp.com",
@@ -75,45 +84,71 @@ const app=initializeApp({
 });
 const db=getFirestore(app);
 
-window.login=()=>{
- if(pass.value==="lock123612"){
-  login.style.display="none";
-  panel.style.display="block";
-  load();
- } else alert("Неверный пароль");
-}
+// LOGIN
+document.getElementById("loginBtn").onclick=()=>{
+ const pass=document.getElementById("passInput").value;
 
-window.add=async()=>{
+ if(pass==="lock123612"){
+   document.getElementById("loginBox").style.display="none";
+   document.getElementById("panel").style.display="block";
+   load();
+ } else {
+   alert("Неверный пароль");
+ }
+};
+
+// ADD PRODUCT
+document.getElementById("addBtn").onclick=async()=>{
+ const n=name.value.trim();
+ const p=price.value.trim();
+ const i=image.value.trim();
+ const c=category.value;
+
+ if(!n||!p||!i){
+   alert("Заполни всё");
+   return;
+ }
+
  await addDoc(collection(db,"products"),{
-  name:name.value,
-  price:price.value,
-  image:image.value,
-  category:category.value
+  name:n,
+  price:p,
+  image:i,
+  category:c
  });
- alert("Добавлено!");
- load();
-}
 
+ alert("Добавлено!");
+ name.value="";
+ price.value="";
+ image.value="";
+
+ load();
+};
+
+// LOAD PRODUCTS
 async function load(){
  list.innerHTML="";
  const snap=await getDocs(collection(db,"products"));
 
  snap.forEach(d=>{
   const p=d.data();
-  list.innerHTML+=`
-   <div class="card">
+
+  const div=document.createElement("div");
+  div.className="card";
+  div.innerHTML=`
     ${p.name} — ${p.price}
-    <button class="del" onclick="del('${d.id}')">Удалить</button>
-   </div>
+    <button class="del">Удалить</button>
   `;
+
+  div.querySelector(".del").onclick=async()=>{
+    await deleteDoc(doc(db,"products",d.id));
+    load();
+  };
+
+  list.appendChild(div);
  });
 }
 
-window.del=async(id)=>{
- await deleteDoc(doc(db,"products",id));
- load();
-}
-
 </script>
+
 </body>
 </html>
