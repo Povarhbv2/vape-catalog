@@ -17,21 +17,19 @@ body{
 .title{
   text-align:center;
   color:#c86bff;
-  text-shadow:0 0 15px #a100ff;
 }
 
 .grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:12px;
-  padding:12px;
+  gap:10px;
+  padding:10px;
 }
 
 .card{
   background:#141420;
-  border-radius:16px;
-  padding:12px;
-  border:1px solid #6a00ff;
+  padding:10px;
+  border-radius:12px;
 }
 
 .card img{
@@ -43,34 +41,21 @@ body{
 
 button{
   background:#a100ff;
-  border:none;
   color:white;
+  border:none;
   padding:10px;
-  border-radius:10px;
   width:100%;
-  margin-top:8px;
-}
-
-.cartBtn{
-  position:fixed;
-  bottom:15px;
-  right:15px;
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  font-size:20px;
+  border-radius:10px;
+  margin-top:5px;
 }
 
 .modal{
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  inset:0;
   background:#000;
   display:none;
   overflow:auto;
-  padding:10px;
+  padding:15px;
 }
 
 input{
@@ -82,140 +67,142 @@ input{
 }
 </style>
 
-<title>VapeStock</title>
+<title>VapeStock PRO</title>
 </head>
 
 <body>
 
 <h2 class="title">💨 VapeStock</h2>
 
-<div id="categories" class="grid"></div>
 <div id="products" class="grid"></div>
 
-<button class="cartBtn" onclick="openCart()">🛒</button>
-<button onclick="openAdmin()">ADMIN</button>
+<button onclick="openCart()">🛒 Корзина</button>
 
 <div id="modal" class="modal"></div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
-  authDomain:"vapestock-3dc76.firebaseapp.com",
-  projectId:"vapestock-3dc76"
+const firebaseConfig={
+ apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
+ authDomain:"vapestock-3dc76.firebaseapp.com",
+ projectId:"vapestock-3dc76"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
 
-const tg = window.Telegram?.WebApp;
+const tg=window.Telegram?.WebApp;
 if(tg) tg.expand();
 
 let CART=[];
 let ALL=[];
 
-const catDiv=document.getElementById("categories");
 const prodDiv=document.getElementById("products");
 const modal=document.getElementById("modal");
 
 async function load(){
-  const snap=await getDocs(collection(db,"products"));
-  ALL=[];
-  snap.forEach(d=>ALL.push(d.data()));
+ const snap=await getDocs(collection(db,"products"));
+ snap.forEach(d=>{
+   const p=d.data();
+   ALL.push(p);
 
-  showCategories();
+   const div=document.createElement("div");
+   div.className="card";
+   div.innerHTML=`
+     <img src="${p.image}">
+     <h4>${p.name}</h4>
+     <p>${p.price}</p>
+     <button onclick='add(${JSON.stringify(p)})'>В корзину</button>
+   `;
+   prodDiv.appendChild(div);
+ });
 }
 
-function showCategories(){
-  catDiv.innerHTML="";
-  const cats=[...new Set(ALL.map(p=>p.category))];
-
-  cats.forEach(c=>{
-    const d=document.createElement("div");
-    d.className="card";
-    d.innerHTML=`<h3>${c}</h3>`;
-    d.onclick=()=>showProducts(c);
-    catDiv.appendChild(d);
-  });
-}
-
-function showProducts(cat){
-  prodDiv.innerHTML="";
-  ALL.filter(p=>p.category==cat).forEach(p=>{
-    const d=document.createElement("div");
-    d.className="card";
-    d.innerHTML=`
-      <img src="${p.image}">
-      <h4>${p.name}</h4>
-      <p>${p.price}</p>
-      <button onclick='event.stopPropagation();addCart(${JSON.stringify(p)})'>В корзину</button>
-    `;
-    d.onclick=()=>openProduct(p);
-    prodDiv.appendChild(d);
-  });
-}
-
-window.openProduct=p=>{
-  modal.style.display="block";
-  modal.innerHTML=`
-    <button onclick="closeModal()">Назад</button>
-    <img src="${p.image}" style="width:100%">
-    <h2>${p.name}</h2>
-    <h3>${p.price}</h3>
-    <button onclick='addCart(${JSON.stringify(p)})'>В корзину</button>
-  `;
-}
-
-window.closeModal=()=>modal.style.display="none";
-
-window.addCart=p=>{
-  CART.push(p);
-  alert("Добавлено!");
+window.add=p=>{
+ CART.push(p);
+ alert("Добавлено в корзину");
 }
 
 window.openCart=()=>{
-  modal.style.display="block";
-  let html="<h2>Корзина</h2>";
-  CART.forEach(p=>html+=`<p>${p.name} — ${p.price}</p>`);
-  html+=`<button onclick="checkout()">Оформить заказ</button>`;
-  modal.innerHTML=html;
+ modal.style.display="block";
+
+ let html="<h2>Корзина</h2>";
+ let total=0;
+
+ CART.forEach(p=>{
+   html+=`<p>${p.name} — ${p.price}</p>`;
+   total+=Number(p.price.replace(/\D/g,''));
+ });
+
+ html+=`
+   <h3>Оформление</h3>
+   <input id="fio" placeholder="ФИО">
+   <input id="phone" placeholder="Телефон">
+   <input id="email" placeholder="Email">
+   <button onclick="checkout()">Заказать</button>
+ `;
+
+ modal.innerHTML=html;
 }
 
 window.checkout=()=>{
-  if(tg){
-    tg.sendData(JSON.stringify(CART));
-  }
-  alert("Заказ отправлен!");
-  CART=[];
-  closeModal();
-}
+ const orderId=Date.now()+"-0001";
 
-window.openAdmin=()=>{
-  modal.style.display="block";
-  modal.innerHTML=`
-    <h2>Добавить товар</h2>
-    <input id="n" placeholder="Название">
-    <input id="p" placeholder="Цена">
-    <input id="i" placeholder="Ссылка на фото">
-    <input id="c" placeholder="Категория">
-    <button onclick="save()">Сохранить</button>
-  `;
-}
+ const fio=document.getElementById("fio").value;
+ const phone=document.getElementById("phone").value;
+ const email=document.getElementById("email").value;
 
-window.save=async()=>{
-  await addDoc(collection(db,"products"),{
-    name:n.value,
-    price:p.value,
-    image:i.value,
-    category:c.value,
-    stock:10
-  });
-  alert("Товар добавлен");
-  closeModal();
-  load();
+ let items="";
+ let sum=0;
+
+ CART.forEach(p=>{
+   items+=`${p.name} ${p.price} x1\n`;
+   sum+=Number(p.price.replace(/\D/g,''));
+ });
+
+ const buyerMsg=
+`Заказ №${orderId} успешно оформлен
+
+Способ оплаты: Оплата наличными
+Покупатель: ${fio} (${tg?.initDataUnsafe?.user?.username ? "https://telegram.me/"+tg.initDataUnsafe.user.username : ""})
+Номер телефона: ${phone}
+Email: ${email}
+Способ доставки: Самовывоз
+
+Состав заказа:
+${items}
+
+Сумма: ${sum} ₽
+
+Спасибо за заказ!`;
+
+ const sellerMsg=
+`Новый заказ без оплаты №${orderId}
+
+Способ оплаты: Оплата наличными
+Покупатель: ${fio}
+Телефон: ${phone}
+Email: ${email}
+
+Состав заказа:
+${items}
+
+Сумма: ${sum} ₽`;
+
+ if(tg){
+   tg.sendData(JSON.stringify({
+     orderId,
+     buyerMsg,
+     sellerMsg
+   }));
+ }
+
+ alert("Заказ отправлен!");
+ CART=[];
+ modal.style.display="none";
 }
 
 load();
