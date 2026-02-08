@@ -12,49 +12,49 @@
 body{
     margin:0;
     font-family:Arial;
-    background:#06060f;
-    color:white;
+    background: radial-gradient(circle at top,#14002a,#050510);
+    color:#d8b3ff;
 }
 
 /* HEADER */
 header{
-    padding:15px;
+    padding:20px;
     text-align:center;
-    font-size:26px;
-    background:linear-gradient(45deg,#6a00ff,#c300ff);
-    box-shadow:0 0 20px #a000ff;
+    font-size:28px;
+    background:linear-gradient(45deg,#6a00ff,#b300ff);
+    box-shadow:0 0 25px #a000ff;
 }
 
 /* SEARCH */
 .search{
-    padding:10px;
+    padding:12px;
 }
 .search input{
     width:100%;
-    padding:12px;
-    border-radius:12px;
+    padding:14px;
+    border-radius:14px;
     border:none;
     background:#111122;
-    color:white;
+    color:#d8b3ff;
 }
 
 /* CATEGORIES */
 .catbar{
     display:flex;
-    overflow:auto;
-    gap:10px;
+    gap:8px;
     padding:10px;
+    overflow:auto;
 }
 .cat{
-    background:#1a1a2e;
+    background:#14002a;
     border:1px solid #a000ff;
     padding:8px 14px;
-    border-radius:20px;
+    border-radius:18px;
     cursor:pointer;
-    transition:0.3s;
+    white-space:nowrap;
 }
 .cat:hover{
-    box-shadow:0 0 10px #a000ff;
+    box-shadow:0 0 12px #a000ff;
 }
 
 /* CATALOG */
@@ -65,81 +65,76 @@ header{
 /* CARD */
 .card{
     background:#111122;
-    padding:10px;
-    border-radius:14px;
-    margin-bottom:15px;
-    box-shadow:0 0 15px #6a00ff55;
-    cursor:pointer;
-    transform:scale(0.95);
-    opacity:0;
-    animation:fadeIn 0.4s forwards;
+    padding:12px;
+    border-radius:16px;
+    margin-bottom:18px;
+    box-shadow:0 0 20px #6a00ff55;
+    animation:fade .4s;
 }
-@keyframes fadeIn{
-    to{transform:scale(1);opacity:1;}
+@keyframes fade{
+    from{opacity:0;transform:scale(.95)}
+    to{opacity:1;transform:scale(1)}
 }
 
 .card img{
     width:100%;
-    border-radius:12px;
+    border-radius:14px;
 }
 
-/* PRODUCT PAGE */
+/* PRODUCT */
 .productView{
     display:none;
     padding:15px;
-    animation:slideUp 0.4s;
-}
-@keyframes slideUp{
-    from{transform:translateY(30px);opacity:0;}
-    to{transform:translateY(0);opacity:1;}
 }
 
 .bigImg{
     width:100%;
-    border-radius:15px;
-    box-shadow:0 0 20px #a000ff;
+    border-radius:16px;
+    box-shadow:0 0 25px #a000ff;
 }
 
 .price{
     font-size:24px;
-    color:#ff4df0;
+    color:#c77dff;
 }
 
 /* BUTTON */
 button{
-    background:linear-gradient(45deg,#a000ff,#e100ff);
+    background:linear-gradient(45deg,#a000ff,#d000ff);
     border:none;
     padding:12px;
     color:white;
     border-radius:10px;
-    margin-top:10px;
     cursor:pointer;
+    margin-top:8px;
 }
 
 /* ADMIN */
 .admin{
     display:none;
     padding:15px;
-    background:#0e0e18;
+    background:#0d0018;
 }
 
 input,select{
     width:100%;
     padding:10px;
     margin:6px 0;
-    border-radius:6px;
+    border-radius:8px;
     border:none;
+}
+
+/* FAVORITE */
+.fav{
+    font-size:22px;
+    cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-VapeStock 💜
-<br>
-<button onclick="login()">Админка</button>
-</header>
+<header id="title">VapeStock</header>
 
 <div class="search">
 <input id="search" placeholder="Поиск..." oninput="load()">
@@ -166,9 +161,6 @@ VapeStock 💜
 </select>
 
 <button onclick="addProduct()">Добавить</button>
-
-<hr>
-<div id="adminList"></div>
 </div>
 
 <script type="module">
@@ -177,21 +169,20 @@ const tg=window.Telegram.WebApp;
 tg.expand();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc }
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, increment }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig={
+const app=initializeApp({
  apiKey:"AIzaSyDJxLWeTxVeH2r64rv9rCLUW4RtM1A6zXI",
  authDomain:"vapestock-3dc76.firebaseapp.com",
- projectId:"vapestock-3dc76",
-};
-
-const app=initializeApp(firebaseConfig);
+ projectId:"vapestock-3dc76"
+});
 const db=getFirestore(app);
+
+let favs=JSON.parse(localStorage.getItem("favs")||"[]");
 
 const catalog=document.getElementById("catalog");
 const productView=document.getElementById("productView");
-const adminList=document.getElementById("adminList");
 
 let current="all";
 
@@ -203,6 +194,7 @@ const categories={
  coil:"Испарители"
 };
 
+/* CATEGORY BAR */
 for(const key in categories){
  const b=document.createElement("div");
  b.className="cat";
@@ -211,13 +203,12 @@ for(const key in categories){
  catbar.appendChild(b);
 }
 
+/* LOAD PRODUCTS */
 async function load(){
  catalog.innerHTML="";
- adminList.innerHTML="";
  productView.style.display="none";
- catalog.style.display="block";
 
- const search=document.getElementById("search").value.toLowerCase();
+ const search=searchInput.value.toLowerCase();
 
  const snap=await getDocs(collection(db,"products"));
 
@@ -228,59 +219,77 @@ async function load(){
   if(current!="all" && p.category!=current) return;
   if(!p.name.toLowerCase().includes(search)) return;
 
+  const isFav=favs.includes(id);
+
   const div=document.createElement("div");
   div.className="card";
   div.innerHTML=`
    <img src="${p.image}">
    <h3>${p.name}</h3>
    <p>${p.price}</p>
+   <span class="fav">${isFav?"💜":"🤍"}</span>
   `;
-  div.onclick=()=>showProduct(p);
-  catalog.appendChild(div);
 
-  const ad=document.createElement("div");
-  ad.innerHTML=`${p.name} <button onclick="del('${id}')">❌</button>`;
-  adminList.appendChild(ad);
+  div.onclick=()=>showProduct(p,id);
+  div.querySelector(".fav").onclick=(e)=>{
+    e.stopPropagation();
+    toggleFav(id);
+  }
+
+  catalog.appendChild(div);
  });
 }
 
-window.showProduct=function(p){
+/* FAVORITES */
+function toggleFav(id){
+ if(favs.includes(id)) favs=favs.filter(x=>x!=id);
+ else favs.push(id);
+ localStorage.setItem("favs",JSON.stringify(favs));
+ load();
+}
+
+/* PRODUCT PAGE */
+async function showProduct(p,id){
+ await updateDoc(doc(db,"products",id),{views:increment(1)});
+
  catalog.style.display="none";
  productView.style.display="block";
+
  productView.innerHTML=`
   <button onclick="back()">⬅ Назад</button>
   <img class="bigImg" src="${p.image}">
   <h2>${p.name}</h2>
   <div class="price">${p.price}</div>
-  <p>Категория: ${categories[p.category]}</p>
+  <p>Просмотров: ${p.views||0}</p>
  `;
 }
 
-window.back=function(){
+window.back=()=>{
  productView.style.display="none";
  catalog.style.display="block";
 }
 
-window.addProduct=async function(){
+/* ADMIN SECRET TAP */
+let hold;
+title.onmousedown=()=>{
+ hold=setTimeout(()=>{
+  if(prompt("Пароль")==="lock123612"){
+    admin.style.display="block";
+  }
+ },1000);
+};
+title.onmouseup=()=>clearTimeout(hold);
+
+/* ADD PRODUCT */
+window.addProduct=async()=>{
  await addDoc(collection(db,"products"),{
   name:name.value,
   price:price.value,
   image:image.value,
-  category:category.value
+  category:category.value,
+  views:0
  });
  load();
-}
-
-window.del=async function(id){
- await deleteDoc(doc(db,"products",id));
- load();
-}
-
-// 🔐 НОВЫЙ ПАРОЛЬ
-window.login=function(){
- if(prompt("Пароль")==="lock123612"){
-  admin.style.display="block";
- }
 }
 
 load();
