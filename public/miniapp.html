@@ -16,13 +16,9 @@ body{
     color:#d8b3ff;
 }
 
-/* HEADER */
-header{
-    padding:20px;
-    text-align:center;
-    font-size:28px;
-    background:linear-gradient(45deg,#6a00ff,#b300ff);
-    box-shadow:0 0 25px #a000ff;
+/* SIMPLE TOP BAR */
+.top{
+    height:40px;
 }
 
 /* SEARCH */
@@ -53,9 +49,6 @@ header{
     cursor:pointer;
     white-space:nowrap;
 }
-.cat:hover{
-    box-shadow:0 0 12px #a000ff;
-}
 
 /* CATALOG */
 .catalog{
@@ -69,13 +62,7 @@ header{
     border-radius:16px;
     margin-bottom:18px;
     box-shadow:0 0 20px #6a00ff55;
-    animation:fade .4s;
 }
-@keyframes fade{
-    from{opacity:0;transform:scale(.95)}
-    to{opacity:1;transform:scale(1)}
-}
-
 .card img{
     width:100%;
     border-radius:14px;
@@ -86,13 +73,11 @@ header{
     display:none;
     padding:15px;
 }
-
 .bigImg{
     width:100%;
     border-radius:16px;
     box-shadow:0 0 25px #a000ff;
 }
-
 .price{
     font-size:24px;
     color:#c77dff;
@@ -124,7 +109,6 @@ input,select{
     border:none;
 }
 
-/* FAVORITE */
 .fav{
     font-size:22px;
     cursor:pointer;
@@ -134,7 +118,8 @@ input,select{
 
 <body>
 
-<header id="title">VapeStock</header>
+<!-- скрытая зона для входа в админку -->
+<div class="top" id="secret"></div>
 
 <div class="search">
 <input id="search" placeholder="Поиск..." oninput="load()">
@@ -143,7 +128,6 @@ input,select{
 <div class="catbar" id="catbar"></div>
 
 <div class="catalog" id="catalog"></div>
-
 <div class="productView" id="productView"></div>
 
 <div class="admin" id="admin">
@@ -169,7 +153,7 @@ const tg=window.Telegram.WebApp;
 tg.expand();
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, increment }
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, increment }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const app=initializeApp({
@@ -269,16 +253,19 @@ window.back=()=>{
  catalog.style.display="block";
 }
 
-/* ADMIN SECRET TAP */
-let hold;
-title.onmousedown=()=>{
- hold=setTimeout(()=>{
-  if(prompt("Пароль")==="lock123612"){
-    admin.style.display="block";
-  }
- },1000);
-};
-title.onmouseup=()=>clearTimeout(hold);
+/* 🔐 ADMIN — 5 ТАПОВ */
+let taps=0;
+secret.onclick=()=>{
+ taps++;
+ if(taps>=5){
+   const pass=prompt("Пароль:");
+   if(pass==="lock123612"){
+      admin.style.display="block";
+   }
+   taps=0;
+ }
+ setTimeout(()=>taps=0,1500);
+}
 
 /* ADD PRODUCT */
 window.addProduct=async()=>{
